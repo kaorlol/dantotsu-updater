@@ -2,7 +2,7 @@ name: checker
 
 on:
   schedule:
-    - cron: '* * * * *'
+    - cron: '*/5 * * * *'
 
 jobs:
   check_workflow_id:
