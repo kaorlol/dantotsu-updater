@@ -1,8 +1,8 @@
-name: fire checker pro cool fire sigma skibidi
+name: checker
 
 on:
   schedule:
-    - cron: '*/1 * * * *' # Runs every minute WOW!
+    - cron: '* * * * *'
 
 jobs:
   check_workflow_id:
