@@ -1,0 +1,36 @@
+name: fire checker pro cool fire sigma skibidi
+
+on:
+  schedule:
+    - cron: '*/1 * * * *' # Runs every minute WOW!
+
+jobs:
+  check_workflow_id:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Compare Workflow ID
+      id: compare_ids
+      run: |
+        stored_workflow_id=$(cat ./temp/workflow-id.txt)
+        latest_workflow_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev" \
+            | jq -r '.workflow_runs[0].id')
+        echo "::set-output name=ids_same::$(test "$stored_workflow_id" == "$latest_workflow_id"; echo $?)"
+
+  run_if_changed:
+    needs: check_workflow_id
+    runs-on: ubuntu-latest
+    if: ${{ needs.check_workflow_id.outputs.ids_same == '1' }}
+
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Run Go Script
+      run: echo "test works!"
