@@ -27,6 +27,13 @@ jobs:
                     echo "ids_same=1" >> $GITHUB_ENV
                   fi
 
+            - name: Debug
+              id: debug
+              run: |
+                  echo "ids_same: ${{ env.ids_same }}"
+                  echo "GITHUB_ENV: $GITHUB_ENV"
+                    
+
     run_on_change:
         needs: check_workflow_id
         runs-on: ubuntu-latest
