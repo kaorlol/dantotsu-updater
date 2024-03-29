@@ -22,9 +22,9 @@ jobs:
                   latest_workflow_id=$(echo $latest_workflow_info | jq -r '.workflow_runs[0].id')
                   echo "Latest Workflow ID: $latest_workflow_id"
                   if [ "$stored_workflow_id" == "$latest_workflow_id" ]; then
-                    echo "$stored_workflow_id" >> $GITHUB_STATE
+                    echo "ids_same=0" >> $GITHUB_ENV
                   else
-                    echo "1" >> $GITHUB_STATE
+                    echo "ids_same=1" >> $GITHUB_ENV
                   fi
 
     run_on_change:
@@ -34,6 +34,6 @@ jobs:
             - name: Checkout Repository
               uses: actions/checkout@v2
 
-            - name: Run on Change
-              if: ${{ runner.workspace }}/$GITHUB_STATE == '1'
+            - name: Set Output
+              if: env.ids_same == '1'
               run: echo "Workflow ID has changed"
