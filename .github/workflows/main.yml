@@ -26,7 +26,8 @@ jobs:
                   else
                     echo "::set-output name=ids_same::1"
                   fi
-                  echo "Output ids_same: ${{ steps.compare_ids.outputs.ids_same }}" # Debug line
+                  echo "::set-output name=stored_workflow_id::$stored_workflow_id" # Debug line
+                  echo "::set-output name=latest_workflow_id::$latest_workflow_id" # Debug line
 
     run_on_change:
         needs: check_workflow_id
