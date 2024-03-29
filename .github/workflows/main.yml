@@ -64,6 +64,6 @@ jobs:
               with:
                   files: ./temp/app-google-alpha.apk
                   token: ${{ secrets.GITHUB_TOKEN }}
-                  tag_name: ${{ steps.apk-info.outputs.version-name }}-${{ steps.apk-info.outputs.version-code }}
-                  name: Release ${{ steps.apk-info.outputs.version-name }}-${{ steps.apk-info.outputs.version-code }}
+                  tag_name: ${{ steps.apk-info.outputs.version-name }}-${{ github.run_id }}
+                  name: Release ${{ steps.apk-info.outputs.version-name }}-${{ github.run_id }}
               if: env.ids_same == '1'
