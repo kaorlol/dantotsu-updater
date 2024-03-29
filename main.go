@@ -16,6 +16,9 @@ import (
 func main() {
 	pat := os.Getenv("TOKEN_PAT")
     if pat == "" {
+		for _, e := range os.Environ() {
+			fmt.Println(e)
+		}
         panic("GitHub PAT not found in environment variables")
     }
 
