@@ -51,13 +51,13 @@ jobs:
                   git config --global user.name "kaorlol"
                   git add .
                   git commit -m "Updated dantotsu to latest version"
-              if: steps.compare_ids.outputs.ids_same == '1'
+              if: env.ids_same == '1'
 
             - name: Push Changes
               uses: ad-m/github-push-action@master
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
-              if: steps.compare_ids.outputs.ids_same == '1'
+              if: env.ids_same == '1'
 
             - name: Publish Release
               uses: softprops/action-gh-release@v1
@@ -66,4 +66,4 @@ jobs:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag_name: ${{ steps.apk-info.outputs.version-name }}
                   name: Release ${{ steps.apk-info.outputs.version-name }}
-              if: steps.compare_ids.outputs.ids_same == '1'
+              if: env.ids_same == '1'
