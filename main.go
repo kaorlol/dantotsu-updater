@@ -25,24 +25,25 @@ func main() {
 	repo := "Dantotsu"
 	branch := "dev"
 
-	workflowId := getLatestWorkflowId(client, owner, repo, branch)
-	artifacts := getArtifacts(client, owner, repo, workflowId)
-	artifactId, err := getArtifactId(artifacts)
-	if err != nil {
-		return
+	workflowId, status := getLatestWorkflowId(client, owner, repo, branch)
+	if status != "completed" {
+		panic("Latest workflow run is not completed")
 	}
+
+	artifacts := getArtifacts(client, owner, repo, workflowId)
+	artifactId := getArtifactId(artifacts)
 
 	downloadDantotsu(client, owner, repo, workflowId, artifactId)
 }
 
-func getLatestWorkflowId(client *github.Client, owner, repo, branch string) int64 {
+func getLatestWorkflowId(client *github.Client, owner, repo, branch string) (int64, string) {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{Branch: branch})
 	if err != nil {
 		panic("Error getting workflow runs")
 	}
 
-	println(workflowRuns.WorkflowRuns[0].GetStatus())
-	return workflowRuns.WorkflowRuns[0].GetID()
+	latestRun := workflowRuns.WorkflowRuns[0]
+	return latestRun.GetID(), latestRun.GetStatus()
 }
 
 func getArtifacts(client *github.Client, owner, repo string, workflowId int64) []*github.Artifact {
@@ -54,14 +55,14 @@ func getArtifacts(client *github.Client, owner, repo string, workflowId int64) [
 	return artifacts.Artifacts
 }
 
-func getArtifactId(Artifacts []*github.Artifact) (int64, error) {
+func getArtifactId(Artifacts []*github.Artifact) int64 {
 	for _, artifact := range Artifacts {
 		if artifact.GetName() == "Dantotsu" {
-			return artifact.GetID(), nil
+			return artifact.GetID()
 		}
 	}
 
-	return 0, fmt.Errorf("artifact not found")
+	panic("Dantotsu artifact not found")
 }
 
 func downloadDantotsu(client *github.Client, owner, repo string, workflowId int64, artifactId int64) {
@@ -85,7 +86,7 @@ func downloadDantotsu(client *github.Client, owner, repo string, workflowId int6
 	}
 
 	fmt.Println("Artifact downloaded and extracted successfully")
-	fmt.Println("Workflow ID:", workflowId)
+	fmt.Println("New Workflow ID:", workflowId)
 }
 
 func downloadAndExtractAPK(downloadUrl, outputDir string) error {
