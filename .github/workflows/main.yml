@@ -69,15 +69,10 @@ jobs:
     manual-rerun:
       name: Re-run workflow
       needs: check_for_update
-      # Always run, except when manually cancelled.
       if: success() || failure()
       runs-on: ubuntu-latest
       steps:
-        # Github schedule event would be much easier to use, but it has a terrible
-        # precision, triggering the workflow with more than 10 minutes off the
-        # expected time! And it's even worse at the beginning of every hour 
-        # (which is our case). So we'll use a small hack to make a simple cronjob.
-        - name: Sleep until the 5 minutes and 10 seconds
+        - name: Sleep until 5 minutes and 10 seconds
           run: |
             sleep 310
     
