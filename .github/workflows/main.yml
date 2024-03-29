@@ -16,21 +16,22 @@ jobs:
       id: compare_ids
       run: |
         stored_workflow_id=$(cat ./temp/workflow-id.txt)
+        echo "Stored Workflow ID: $stored_workflow_id"
         latest_workflow_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev" \
             | jq -r '.workflow_runs[0].id')
+        echo "Latest Workflow ID: $latest_workflow_id"
         echo "::set-output name=ids_same::$(test "$stored_workflow_id" == "$latest_workflow_id"; echo $?)"
 
-  run_if_changed:
+  run_on_change:
     needs: check_workflow_id
     runs-on: ubuntu-latest
-    if: ${{ needs.check_workflow_id.outputs.ids_same == '1' }}
-
     steps:
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16
-
-    - name: Run Go Script
-      run: echo "test works!"
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+    
+    - name: Run on Change
+      if: steps.check_workflow_id.outputs.ids_same == '1'
+      run: echo "Workflow ID has changed"
+    
+    
