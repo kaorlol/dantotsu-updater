@@ -16,7 +16,7 @@ jobs:
             - name: Compare Workflow ID
               id: compare_ids
               run: |
-                  stored_workflow_id=
+                  stored_workflow_id=$(cat ./temp/workflow_id.txt)
                   echo "Stored Workflow ID: $stored_workflow_id"
                   latest_workflow_info=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                       "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev")
