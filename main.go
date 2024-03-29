@@ -50,10 +50,10 @@ func main() {
 		panic("Error downloading and extracting APK: " + err.Error())
 	}
 
-	workflowIdFile := filepath.Join(workspacePath, "workflow-id.txt")
+	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
 	err = os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
 	if err != nil {
-		panic("Error writing artifactId to file: " + err.Error())
+		panic("Error writing workflow id to file: " + err.Error())
 	}
 
 	fmt.Println("Artifact downloaded and extracted successfully")
