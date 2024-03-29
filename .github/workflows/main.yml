@@ -16,7 +16,7 @@ jobs:
             - name: Compare Workflow ID
               id: compare_ids
               run: |
-                  stored_workflow_id=$(cat ./temp/workflow-id.txt)
+                  stored_workflow_id=
                   echo "Stored Workflow ID: $stored_workflow_id"
                   latest_workflow_info=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                       "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev")
@@ -42,6 +42,7 @@ jobs:
               uses: hkusu/apk-info-action@v1
               with:
                   apk-path: "./temp/app-google-alpha.apk"
+              if: ${{ github.event.inputs.ids_same }} == 1
 
             - name: Commit Changes
               run: |
@@ -49,13 +50,13 @@ jobs:
                   git config --global user.name "kaorlol"
                   git add .
                   git commit -m "Updated dantotsu to latest version"
-              if: env.ids_same == '1'
+              if: ${{ github.event.inputs.ids_same }} == 1
 
             - name: Push Changes
               uses: ad-m/github-push-action@master
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
-              if: env.ids_same == '1'
+              if: ${{ github.event.inputs.ids_same }} == 1
 
             - name: Publish Release
               uses: softprops/action-gh-release@v2
@@ -64,7 +65,7 @@ jobs:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag_name: ${{ steps.apk-info.outputs.version-name }}-${{ github.run_id }}
                   name: Release ${{ steps.apk-info.outputs.version-name }}-${{ github.run_id }}
-              if: env.ids_same == '1'
+              if: ${{ github.event.inputs.ids_same }} == 1
 
     manual-rerun:
       name: Re-run workflow
