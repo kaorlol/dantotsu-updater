@@ -17,7 +17,6 @@ Then for the settings:
 
 ## Credits
 
--   [ibo](https://github.com/sneazy-ibo) - fixed\fixing some workflow issues.
 -   [me](https://github.com/kaorlol) - all of the go code
 -   [chatgpt](https://chat.openai.com/) - most of the workflow shit because its aids 😡😡😡
 
