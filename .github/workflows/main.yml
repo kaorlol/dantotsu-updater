@@ -31,7 +31,6 @@ jobs:
               id: debug
               run: |
                   echo "ids_same: ${{ env.ids_same }}"
-                  echo "GITHUB_ENV: $GITHUB_ENV"
                     
 
     run_on_change:
@@ -42,5 +41,6 @@ jobs:
               uses: actions/checkout@v2
 
             - name: Set Output
-              if: env.ids_same == '1'
-              run: echo "Workflow ID has changed"
+              id: set_output
+              run: |
+                  echo "ids_same: ${{ needs.check_workflow_id.outputs.compare_ids.ids_same }}"
