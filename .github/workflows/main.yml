@@ -36,7 +36,7 @@ jobs:
                     echo "Workflow ID has changed, running main.go"
                     go run main.go
                     echo "Updating stored workflow id"
-                    sed -i "s|$stored_workflow_id|$latest_workflow_id|g" ./temp/workflow-id.txt
+                    echo $latest_workflow_id >> ./temp/workflow-id.txt
                   else
                     echo "Workflow ID has not changed"
                   fi
