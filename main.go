@@ -41,6 +41,7 @@ func getLatestWorkflowId(client *github.Client, owner, repo, branch string) int6
 		panic("Error getting workflow runs")
 	}
 
+	println(workflowRuns.WorkflowRuns[0].GetStatus())
 	return workflowRuns.WorkflowRuns[0].GetID()
 }
 
