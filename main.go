@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/google/go-github/v60/github"
 )
@@ -30,9 +29,7 @@ func main() {
 	artifacts := getArtifacts(client, owner, repo, workflowId)
 	artifactId, err := getArtifactId(artifacts)
 	if err != nil {
-		println("Artifact not found, retrying in 5 minutes")
-		time.Sleep(5 * time.Minute)
-		main()
+		return
 	}
 
 	downloadDantotsu(client, owner, repo, workflowId, artifactId)
