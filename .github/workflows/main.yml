@@ -38,6 +38,8 @@ jobs:
                   if [ $ids_same -eq 1 ]; then
                     echo "Workflow ID has changed, running main.go"
                     go run main.go
+                    echo "Updating stored workflow id"
+                    echo $latest_workflow_id > ./temp/workflow-id.txt
                   else
                     echo "Workflow ID has not changed"
                   fi

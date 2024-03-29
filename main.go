@@ -15,12 +15,9 @@ import (
 
 func main() {
 	pat := os.Getenv("TOKEN_PAT")
-    if pat == "" {
-		for _, e := range os.Environ() {
-			fmt.Println(e)
-		}
-        panic("GitHub PAT not found in environment variables")
-    }
+	if pat == "" {
+		panic("GitHub PAT not found in environment variables")
+	}
 
 	client := github.NewClient(nil).WithAuthToken(pat)
 
@@ -45,12 +42,15 @@ func main() {
 		panic("Error downloading artifact, error: " + err.Error())
 	}
 
-	err = downloadAndExtractAPK(artifactDownloadUrl.String())
+	workspacePath := os.Getenv("GITHUB_WORKSPACE")
+	tempDir := filepath.Join(workspacePath, "temp")
+
+	err = downloadAndExtractAPK(artifactDownloadUrl.String(), tempDir)
 	if err != nil {
 		panic("Error downloading and extracting APK: " + err.Error())
 	}
 
-	workflowIdFile := filepath.Join("./temp", "workflow-id.txt")
+	workflowIdFile := filepath.Join(workspacePath, "workflow-id.txt")
 	err = os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
 	if err != nil {
 		panic("Error writing artifactId to file: " + err.Error())
@@ -67,20 +67,19 @@ func getArtifactId(Artifacts []*github.Artifact) int64 {
 	panic("Artifact not found")
 }
 
-func downloadAndExtractAPK(downloadUrl string) error {
+func downloadAndExtractAPK(downloadUrl, outputDir string) error {
 	resp, err := http.Get(downloadUrl)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	tempDir := "./temp"
-	err = os.MkdirAll(tempDir, os.ModePerm)
+	err = os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	tempZipFile := filepath.Join(tempDir, "temp.zip")
+	tempZipFile := filepath.Join(outputDir, "temp.zip")
 	out, err := os.Create(tempZipFile)
 	if err != nil {
 		return err
@@ -106,7 +105,7 @@ func downloadAndExtractAPK(downloadUrl string) error {
 			}
 			defer rc.Close()
 
-			extractedAPK := filepath.Join(tempDir, filepath.Base(f.Name))
+			extractedAPK := filepath.Join(outputDir, filepath.Base(f.Name))
 			extractedFile, err := os.Create(extractedAPK)
 			if err != nil {
 				return err
