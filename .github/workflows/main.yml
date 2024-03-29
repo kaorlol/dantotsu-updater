@@ -1,37 +1,43 @@
 name: checker
 
 on:
-  schedule:
-      - cron: "*/5 * * * *"
-  workflow_dispatch:
+    schedule:
+        - cron: "*/5 * * * *"
+    workflow_dispatch:
+
+env:
+    TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
 
 jobs:
-  check_for_update:
-      runs-on: ubuntu-latest
-      steps:
-          - name: Checkout Repository
-            uses: actions/checkout@v2
+    check_for_update:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v2
 
-          - name: Compare Workflow ID
-            id: compare_ids
-            run: |
-                stored_workflow_id=$(cat ./temp/workflow-id.txt)
-                echo "Stored Workflow ID: $stored_workflow_id"
-                latest_workflow_info=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                    "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev")
-                latest_workflow_id=$(echo $latest_workflow_info | jq -r '.workflow_runs[0].id')
-                echo "Latest Workflow ID: $latest_workflow_id"
-                if [ "$stored_workflow_id" == "$latest_workflow_id" ]; then
-                  echo "ids_same=0" >> $GITHUB_ENV
-                else
-                  echo "ids_same=1" >> $GITHUB_ENV
-                fi
+            - name: Compare Workflow ID
+              id: compare_ids
+              run: |
+                  stored_workflow_id=$(cat ./temp/workflow-id.txt)
+                  echo "Stored Workflow ID: $stored_workflow_id"
+                  latest_workflow_info=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                      "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev")
+                  latest_workflow_id=$(echo $latest_workflow_info | jq -r '.workflow_runs[0].id')
+                  echo "Latest Workflow ID: $latest_workflow_id"
+                  if [ "$stored_workflow_id" == "$latest_workflow_id" ]; then
+                    echo "ids_same=0" >> $GITHUB_ENV
+                  else
+                    echo "ids_same=1" >> $GITHUB_ENV
+                  fi
 
-          - name: Check Workflow ID
-            run: |
-                if [ $ids_same -eq 1 ]; then
-                  echo "Workflow ID has changed, running main.go"
-                  go run main.go
-                else
-                  echo "Workflow ID has not changed"
-                fi
+            - name: Environment List
+              run: env
+
+            - name: Check Workflow ID
+              run: |
+                  if [ $ids_same -eq 1 ]; then
+                    echo "Workflow ID has changed, running main.go"
+                    go run main.go
+                  else
+                    echo "Workflow ID has not changed"
+                  fi
