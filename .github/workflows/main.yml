@@ -30,12 +30,6 @@ jobs:
                     echo "ids_same=1" >> $GITHUB_ENV
                   fi
 
-            - name: Get Apk Info
-              id: apk-info
-              uses: hkusu/apk-info-action@v1
-              with:
-                  apk-path: "./temp/app-google-alpha.apk"
-
             - name: Check Workflow ID
               run: |
                   if [ $ids_same -eq 1 ]; then
@@ -64,6 +58,4 @@ jobs:
               with:
                   files: ./temp/app-google-alpha.apk
                   token: ${{ secrets.GITHUB_TOKEN }}
-                  tag_name: ${{ steps.apk-info.outputs.version-name }}
-                  name: Release ${{ steps.apk-info.outputs.version-name }}
               if: env.ids_same == '1'
