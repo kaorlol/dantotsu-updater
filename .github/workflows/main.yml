@@ -31,9 +31,25 @@ jobs:
                   fi
 
             - name: Get apk info
-              uses: hkusu/apk-info-action@v1.0.3
+              id: apk-info
+              uses: hkusu/apk-info-action@v1
               with:
-                  apk-path: ./temp/app-google-alpha.apk
+                apk-path: "./temp/app-google-alpha.apk"
+            - name: Show apk info
+              run: |
+                echo '${{ steps.apk-info.outputs.application-name }}'
+                echo '${{ steps.apk-info.outputs.application-id }}'
+                echo '${{ steps.apk-info.outputs.version-code }}'
+                echo '${{ steps.apk-info.outputs.version-name }}'
+                echo '${{ steps.apk-info.outputs.min-sdk-version }}'
+                echo '${{ steps.apk-info.outputs.target-sdk-version }}'
+                echo '${{ steps.apk-info.outputs.compile-sdk-version }}'
+                echo '${{ steps.apk-info.outputs.uses-permissions }}'
+                echo '${{ steps.apk-info.outputs.debuggable }}'
+                echo '${{ steps.apk-info.outputs.allow-backup }}'
+                echo '${{ steps.apk-info.outputs.supports-rtl }}'
+                echo '${{ steps.apk-info.outputs.file-size }}'
+                echo '${{ steps.apk-info.outputs.readable-file-size }}'
 
             - name: Check Workflow ID
               run: |
@@ -42,7 +58,6 @@ jobs:
                     go run main.go
                   else
                     echo "Workflow ID has not changed"
-                    echo ${{ steps.apk-info.outputs.version-name }}
                   fi
 
             - name: Commit changes
