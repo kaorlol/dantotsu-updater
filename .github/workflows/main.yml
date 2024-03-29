@@ -3,6 +3,7 @@ name: checker
 on:
   schedule:
     - cron: '*/5 * * * *'
+  workflow_dispatch:  # Add this line
 
 jobs:
   check_workflow_id:
@@ -33,5 +34,3 @@ jobs:
     - name: Run on Change
       if: steps.check_workflow_id.outputs.ids_same == '1'
       run: echo "Workflow ID has changed"
-    
-    
