@@ -27,19 +27,10 @@ jobs:
                   echo "ids_same=1" >> $GITHUB_ENV
                 fi
 
-          - name: Debug
-            id: debug
+          - name: Check Workflow ID
             run: |
-                echo "ids_same: ${{ env.ids_same }}"
-                  
-  run_on_change:
-      needs: check_workflow_id
-      runs-on: ubuntu-latest
-      steps:
-          - name: Checkout Repository
-            uses: actions/checkout@v2
-
-          - name: Set Output
-            id: set_output
-            run: |
-                echo "ids_same: ${{ env.ids_same }}"
+                if [ $ids_same -eq 1 ]; then
+                  echo "Workflow ID has changed"
+                else
+                  echo "Workflow ID has not changed"
+                fi
