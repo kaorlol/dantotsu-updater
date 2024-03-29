@@ -30,6 +30,11 @@ jobs:
                     echo "ids_same=1" >> $GITHUB_ENV
                   fi
 
+            - name: Get apk info
+              uses: hkusu/apk-info-action@v1.0.3
+              with:
+                  apk-path: ./temp/app-google-alpha.apk
+
             - name: Check Workflow ID
               run: |
                   if [ $ids_same -eq 1 ]; then
@@ -37,6 +42,7 @@ jobs:
                     go run main.go
                   else
                     echo "Workflow ID has not changed"
+                    echo ${{ steps.apk-info.outputs.version-name }}
                   fi
 
             - name: Commit changes
@@ -45,8 +51,17 @@ jobs:
                   git config --global user.name "kaorlol"
                   git add .
                   git commit -m "Updated dantotsu to latest version"
+              if: steps.compare_ids.outputs.ids_same == '1'
 
             - name: Push changes
               uses: ad-m/github-push-action@master
               with:
-                github_token: ${{ secrets.GITHUB_TOKEN }}
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+              if: steps.compare_ids.outputs.ids_same == '1'
+
+            # - name: Publish Release
+            #   uses: softprops/action-gh-release@v1
+            #   with:
+            #       files: ./temp/app-google-alpha.apk
+            #       token: ${{ secrets.GITHUB_TOKEN }}
+            #   if: steps.compare_ids.outputs.ids_same == '1'
