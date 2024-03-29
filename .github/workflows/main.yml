@@ -30,7 +30,8 @@ jobs:
           - name: Check Workflow ID
             run: |
                 if [ $ids_same -eq 1 ]; then
-                  echo "Workflow ID has changed"
+                  echo "Workflow ID has changed, running main.go"
+                  go run main.go
                 else
                   echo "Workflow ID has not changed"
                 fi
