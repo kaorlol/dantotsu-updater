@@ -36,7 +36,7 @@ jobs:
                     echo "Workflow ID has changed, running main.go"
                     go run main.go
                     echo "Updating stored workflow id"
-                    echo $latest_workflow_id >> ./temp/workflow-id.txt
+                    echo $latest_workflow_id > ./temp/workflow-id.txt
                   else
                     echo "Workflow ID has not changed"
                   fi
@@ -52,4 +52,3 @@ jobs:
               uses: ad-m/github-push-action@master
               with:
                 github_token: ${{ secrets.GITHUB_TOKEN }}
-
