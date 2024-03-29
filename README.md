@@ -1,8 +1,8 @@
 # [Dantotsu]("https://github.com/rebelonion/Dantotsu/tree/dev") Updater
 
-This is a simple script that grabs the latest release from the actions artifact of the last run, downloads the zip file, grabs the pretester apk from it, the uploads it to releases.
+This is a simple script that grabs the latest release from the actions artifact of the last run, downloads the zip file, grabs the pretester apk from it, then uploads it to releases.
 
-This is written in [go](https://go.dev/) and utilizes github workflow to run the script continuously.
+This is written in [go](https://go.dev/) and utilizes github workflows to run the script continuously.
 
 ## Usage
 
