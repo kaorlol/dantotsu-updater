@@ -36,7 +36,7 @@ func main() {
 		panic("Error getting workflow run artifacts, error: " + err.Error())
 	}
 
-	artifactId := getArtifactId(owner, repo, workflowId, artifacts.Artifacts)
+	artifactId := getArtifactId(artifacts.Artifacts)
 	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifactId, 0)
 	if err != nil {
 		panic("Error downloading artifact, error: " + err.Error())
@@ -54,7 +54,7 @@ func main() {
 	}
 }
 
-func getArtifactId(owner string, repo string, runId int64, Artifacts []*github.Artifact) int64 {
+func getArtifactId(Artifacts []*github.Artifact) int64 {
 	for _, artifact := range Artifacts {
 		if artifact.GetName() == "Dantotsu" {
 			return artifact.GetID()
