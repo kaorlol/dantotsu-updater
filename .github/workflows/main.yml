@@ -72,9 +72,9 @@ jobs:
       if: success() || failure()
       runs-on: ubuntu-latest
       steps:
-        - name: Sleep until 5 minutes and 10 seconds
+        - name: Sleep until 5 minutes have passed
           run: |
-            sleep 310
+            sleep 300
     
         - name: Re-trigger workflow
           run: gh workflow run main.yml
