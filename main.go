@@ -55,6 +55,9 @@ func main() {
 	if err != nil {
 		panic("Error writing artifactId to file: " + err.Error())
 	}
+
+	fmt.Println("Artifact downloaded and extracted successfully")
+	fmt.Println("Workflow ID:", workflowId)
 }
 
 func getArtifactId(Artifacts []*github.Artifact) int64 {
