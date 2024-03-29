@@ -1,44 +1,45 @@
 name: checker
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
+    schedule:
+        - cron: "*/5 * * * *"
+    workflow_dispatch:
 
 jobs:
-  check_workflow_id:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v2
+    check_workflow_id:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v2
 
-    - name: Debug
-      run: ls -la ./temp && cat ./temp/workflow-id.txt || echo "Failed to find temp/workflow-id.txt"
-    
-    - name: Compare Workflow ID
-      id: compare_ids
-      run: |
-        stored_workflow_id=$(cat ./temp/workflow-id.txt)
-        echo "Stored Workflow ID: $stored_workflow_id"
-        latest_workflow_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev" \
-            | jq -r '.workflow_runs[0].id')
-        echo "Latest Workflow ID: $latest_workflow_id"
-        if [ "$stored_workflow_id" == "$latest_workflow_id" ]; then
-          echo "::set-output name=ids_same::0"
-        else
-          echo "::set-output name=ids_same::1"
-        fi
-        echo "::set-output name=stored_workflow_id::$stored_workflow_id" # Debug line
-        echo "::set-output name=latest_workflow_id::$latest_workflow_id" # Debug line
+            - name: Debug
+              run: ls -la ./temp && cat ./temp/workflow-id.txt || echo "Failed to find temp/workflow-id.txt"
 
-  run_on_change:
-    needs: check_workflow_id
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v2
-    
-    - name: Run on Change
-      if: steps.check_workflow_id.outputs.ids_same == '1'
-      run: echo "Workflow ID has changed"
+            - name: Compare Workflow ID
+              id: compare_ids
+              run: |
+                  stored_workflow_id=$(cat ./temp/workflow-id.txt)
+                  echo "Stored Workflow ID: $stored_workflow_id"
+                  latest_workflow_info=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                      "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev")
+                  echo "Latest Workflow Info: $latest_workflow_info"
+                  latest_workflow_id=$(echo $latest_workflow_info | jq -r '.workflow_runs[0].id')
+                  echo "Latest Workflow ID: $latest_workflow_id"
+                  if [ "$stored_workflow_id" == "$latest_workflow_id" ]; then
+                    echo "::set-output name=ids_same::0"
+                  else
+                    echo "::set-output name=ids_same::1"
+                  fi
+                  echo "::set-output name=stored_workflow_id::$stored_workflow_id" # Debug line
+                  echo "::set-output name=latest_workflow_id::$latest_workflow_id" # Debug line
+
+    run_on_change:
+        needs: check_workflow_id
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v2
+
+            - name: Run on Change
+              if: steps.check_workflow_id.outputs.ids_same == '1'
+              run: echo "Workflow ID has changed"
