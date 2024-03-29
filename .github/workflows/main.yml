@@ -39,6 +39,12 @@ jobs:
                     echo "Workflow ID has not changed"
                   fi
 
+            - name: Get Apk Info
+              id: apk-info
+              uses: hkusu/apk-info-action@v1
+              with:
+                  apk-path: "./temp/app-google-alpha.apk"
+
             - name: Commit Changes
               run: |
                   git config --global user.email "${{ secrets.EMAIL }}"
@@ -54,8 +60,10 @@ jobs:
               if: env.ids_same == '1'
 
             - name: Publish Release
-              uses: softprops/action-gh-release@v1
+              uses: softprops/action-gh-release@v2
               with:
                   files: ./temp/app-google-alpha.apk
                   token: ${{ secrets.GITHUB_TOKEN }}
+                  tag_name: ${{ steps.apk-info.outputs.version-name }}-${{ steps.apk-info.outputs.version-code }}
+                  name: Release ${{ steps.apk-info.outputs.version-name }}-${{ steps.apk-info.outputs.version-code }}
               if: env.ids_same == '1'

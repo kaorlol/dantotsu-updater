@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/go-github/v60/github"
 )
@@ -25,21 +26,50 @@ func main() {
 	repo := "Dantotsu"
 	branch := "dev"
 
+	workflowId := getLatestWorkflowId(client, owner, repo, branch)
+	artifacts := getArtifacts(client, owner, repo, workflowId)
+	artifactId, err := getArtifactId(artifacts)
+	if err != nil {
+		println("Artifact not found, retrying in 5 minutes")
+		time.Sleep(5 * time.Minute)
+		main()
+	}
+
+	downloadDantotsu(client, owner, repo, workflowId, artifactId)
+}
+
+func getLatestWorkflowId(client *github.Client, owner, repo, branch string) int64 {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{Branch: branch})
 	if err != nil {
-		panic("Error getting workflow runs, error: " + err.Error())
+		panic("Error getting workflow runs")
 	}
 
-	workflowId := workflowRuns.WorkflowRuns[0].GetID()
+	return workflowRuns.WorkflowRuns[0].GetID()
+}
+
+func getArtifacts(client *github.Client, owner, repo string, workflowId int64) []*github.Artifact {
 	artifacts, _, err := client.Actions.ListWorkflowRunArtifacts(context.Background(), owner, repo, workflowId, &github.ListOptions{})
 	if err != nil {
-		panic("Error getting workflow run artifacts, error: " + err.Error())
+		panic("Error getting workflow run artifacts")
 	}
 
-	artifactId := getArtifactId(artifacts.Artifacts)
+	return artifacts.Artifacts
+}
+
+func getArtifactId(Artifacts []*github.Artifact) (int64, error) {
+	for _, artifact := range Artifacts {
+		if artifact.GetName() == "Dantotsu" {
+			return artifact.GetID(), nil
+		}
+	}
+
+	return 0, fmt.Errorf("artifact not found")
+}
+
+func downloadDantotsu(client *github.Client, owner, repo string, workflowId int64, artifactId int64) {
 	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifactId, 0)
 	if err != nil {
-		panic("Error downloading artifact, error: " + err.Error())
+		panic("Error downloading artifact")
 	}
 
 	workspacePath := os.Getenv("GITHUB_WORKSPACE")
@@ -47,27 +77,17 @@ func main() {
 
 	err = downloadAndExtractAPK(artifactDownloadUrl.String(), tempDir)
 	if err != nil {
-		panic("Error downloading and extracting APK: " + err.Error())
+		panic("Error downloading and extracting APK")
 	}
 
 	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
 	err = os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
 	if err != nil {
-		panic("Error writing workflow id to file: " + err.Error())
+		panic("Error writing workflow id to file")
 	}
 
 	fmt.Println("Artifact downloaded and extracted successfully")
 	fmt.Println("Workflow ID:", workflowId)
-}
-
-func getArtifactId(Artifacts []*github.Artifact) int64 {
-	for _, artifact := range Artifacts {
-		if artifact.GetName() == "Dantotsu" {
-			return artifact.GetID()
-		}
-	}
-
-	panic("Artifact not found")
 }
 
 func downloadAndExtractAPK(downloadUrl, outputDir string) error {
