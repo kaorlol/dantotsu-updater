@@ -43,7 +43,6 @@ jobs:
                     go run main.go
                   else
                     echo "Workflow ID has not changed"
-                    echo "${{ steps.apk-info.outputs.version-name }}"
                   fi
 
             - name: Commit Changes
@@ -60,9 +59,11 @@ jobs:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
               if: steps.compare_ids.outputs.ids_same == '1'
 
-            # - name: Publish Release
-            #   uses: softprops/action-gh-release@v1
-            #   with:
-            #       files: ./temp/app-google-alpha.apk
-            #       token: ${{ secrets.GITHUB_TOKEN }}
-            #   if: steps.compare_ids.outputs.ids_same == '1'
+            - name: Publish Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: ./temp/app-google-alpha.apk
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  tag_name: ${{ steps.apk-info.outputs.version-name }}
+                  name: Release ${{ steps.apk-info.outputs.version-name }}
+              if: steps.compare_ids.outputs.ids_same == '1'
