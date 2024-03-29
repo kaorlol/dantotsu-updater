@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  check_workflow_id:
+  check_for_update:
       runs-on: ubuntu-latest
       steps:
           - name: Checkout Repository
