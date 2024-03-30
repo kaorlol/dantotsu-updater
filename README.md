@@ -15,4 +15,4 @@ Then for the settings:
 2. Set release date as version string (pseudo-version) to `ON`.
 3. Set Reconcile version string with version detected OS to `OFF`.
 
-
+## Hottest Dantotsu updates
