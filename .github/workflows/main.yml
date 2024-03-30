@@ -7,7 +7,6 @@ env:
     TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
     ids_same: 0
     start_time: 0
-    end_time: 0
     duration: 0
 
 jobs:
@@ -78,9 +77,10 @@ jobs:
               id: end
               run: |
                 end_time=$(date +%s)
-                start_time=${{ steps.start.outputs.start_time }}
+                start_time=${{ env.start_time }}
                 duration=$((end_time - start_time))
-                echo "end_time=$end_time" >> $GITHUB_ENV
+                echo "duration=$duration" >> $GITHUB_ENV
+                echo ${{ env.duration }}
 
     manual-rerun:
       name: Re-run workflow
