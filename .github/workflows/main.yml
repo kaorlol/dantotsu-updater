@@ -79,7 +79,7 @@ jobs:
                 end_time=$(date +%s)
                 start_time=${{ env.start_time }}
                 duration=$((end_time - start_time))
-                ehco duration
+                echo duration
                 echo "duration=$duration" >> $GITHUB_ENV
                 echo ${{ env.duration }}
 
