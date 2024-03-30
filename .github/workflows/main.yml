@@ -76,11 +76,7 @@ jobs:
             - name: Record job end time
               id: end
               run: |
-                start_time=${{ env.start_time }}
-                duration=$(( $(date +%s) - $start_time ))
-                echo $(( $(date +%s) - $start_time ))
-                echo $duration
-                echo "duration=$duration" >> $GITHUB_ENV
+                echo "duration=$(( $(date +%s) - ${{ env.start_time }} ))" >> $GITHUB_ENV
                 echo ${{ env.duration }}
 
     manual-rerun:
