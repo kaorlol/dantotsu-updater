@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,9 +15,18 @@ import (
 )
 
 func main() {
+	logFile, err := os.OpenFile("updater.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalf("Failed to open log file: %v", err)
+	}
+	defer logFile.Close()
+	log.SetOutput(logFile)
+	log.SetPrefix("[Dantotsu Updater] ")
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
 	pat := os.Getenv("TOKEN_PAT")
 	if pat == "" {
-		panic("GitHub PAT not found in environment variables")
+		log.Fatalf("GitHub PAT not found in environment variables")
 	}
 
 	client := github.NewClient(nil).WithAuthToken(pat)
@@ -37,36 +47,37 @@ func main() {
 func getLatestWorkflow(client *github.Client, owner, repo, branch string) (int64, string) {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{Branch: branch})
 	if err != nil {
-		panic("Error getting workflow runs")
+		log.Fatalf("Error getting workflow runs: %v", err)
 	}
 
 	latestRun := workflowRuns.WorkflowRuns[0]
+	log.Printf("Latest workflow run ID: %d, status: %s", latestRun.GetID(), latestRun.GetName())
 	return latestRun.GetID(), latestRun.GetName()
 }
 
 func getArtifacts(client *github.Client, owner, repo string, workflowId int64) []*github.Artifact {
 	artifacts, _, err := client.Actions.ListWorkflowRunArtifacts(context.Background(), owner, repo, workflowId, &github.ListOptions{})
 	if err != nil {
-		panic("Error getting workflow run artifacts")
+		log.Fatalf("Error getting workflow run artifacts: %v", err)
 	}
-
 	return artifacts.Artifacts
 }
 
 func getZipArtifactId(Artifacts []*github.Artifact) int64 {
 	for _, artifact := range Artifacts {
 		if artifact.GetName() == "Dantotsu" {
+			log.Printf("Found Dantotsu artifact with ID: %d", artifact.GetID())
 			return artifact.GetID()
 		}
 	}
-
-	panic("Dantotsu artifact not found")
+	log.Fatalf("Dantotsu artifact not found")
+	return 0
 }
 
 func downloadDantotsu(client *github.Client, owner, repo string, workflowId int64, artifactId int64) {
 	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifactId, 0)
 	if err != nil {
-		panic("Error downloading artifact")
+		log.Fatalf("Error downloading artifact: %v", err)
 	}
 
 	workspacePath := os.Getenv("GITHUB_WORKSPACE")
@@ -74,46 +85,46 @@ func downloadDantotsu(client *github.Client, owner, repo string, workflowId int6
 
 	err = downloadAndExtractAPK(artifactDownloadUrl.String(), tempDir)
 	if err != nil {
-		panic("Error downloading and extracting APK")
+		log.Fatalf("Error downloading and extracting APK: %v", err)
 	}
 
 	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
 	err = os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
 	if err != nil {
-		panic("Error writing workflow id to file")
+		log.Fatalf("Error writing workflow ID to file: %v", err)
 	}
 
-	fmt.Println("Artifact downloaded and extracted successfully")
-	fmt.Println("New Workflow ID:", workflowId)
+	log.Printf("Artifact downloaded and extracted successfully")
+	log.Printf("New Workflow ID: %d", workflowId)
 }
 
 func downloadAndExtractAPK(downloadUrl, outputDir string) error {
 	resp, err := http.Get(downloadUrl)
 	if err != nil {
-		return err
+		return fmt.Errorf("error downloading APK: %v", err)
 	}
 	defer resp.Body.Close()
 
 	err = os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating output directory: %v", err)
 	}
 
 	tempZipFile := filepath.Join(outputDir, "temp.zip")
 	out, err := os.Create(tempZipFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating temporary zip file: %v", err)
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("error writing APK to temporary zip file: %v", err)
 	}
 
 	r, err := zip.OpenReader(tempZipFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("error opening temporary zip file: %v", err)
 	}
 	defer r.Close()
 
@@ -121,23 +132,23 @@ func downloadAndExtractAPK(downloadUrl, outputDir string) error {
 		if strings.HasSuffix(f.Name, ".apk") {
 			rc, err := f.Open()
 			if err != nil {
-				return err
+				return fmt.Errorf("error opening APK file in zip: %v", err)
 			}
 			defer rc.Close()
 
 			extractedAPK := filepath.Join(outputDir, filepath.Base(f.Name))
 			extractedFile, err := os.Create(extractedAPK)
 			if err != nil {
-				return err
+				return fmt.Errorf("error creating extracted APK file: %v", err)
 			}
 			defer extractedFile.Close()
 
 			_, err = io.Copy(extractedFile, rc)
 			if err != nil {
-				return err
+				return fmt.Errorf("error writing APK to extracted file: %v", err)
 			}
 
-			fmt.Println("APK extracted successfully:", extractedAPK)
+			log.Printf("APK extracted successfully: %s", extractedAPK)
 			break
 		}
 	}
