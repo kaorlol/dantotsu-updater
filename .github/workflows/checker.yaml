@@ -1,0 +1,94 @@
+name: update-checker
+
+on:
+    workflow_dispatch:
+
+env:
+    TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
+    dantotsu_runs: "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev"
+    ids_same: 0
+    completed: 0
+
+jobs:
+    check_for_update:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v4
+
+            - name: Compare Workflow ID
+              id: compare_ids
+              run: |
+                while [ ${{ env.ids_same }} -eq 0 ]; do
+                    stored_workflow_id=$(cat ./temp/workflow-id.txt)
+                    latest_workflow_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                        "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].id')
+                    if [ "$stored_workflow_id" == "$latest_workflow_id" ]; then
+                      echo "ids_same=0" >> $GITHUB_ENV
+                    else
+                      echo "ids_same=1" >> $GITHUB_ENV
+                    fi
+                    sleep 10
+                done
+
+            - name: Wait Until Completed
+              run: |
+                  while [ ${{ env.completed }} -eq 0 ]; do
+                  latest_workflow_status=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                      "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].status')
+                    if [ "$latest_workflow_status" == "completed" ]; then
+                      echo "completed=1" >> $GITHUB_ENV
+                    fi
+                    sleep 10
+                  done
+              if: env.ids_same == 1
+
+            - name: Run Main.go
+              run: go run main.go
+              if: env.ids_same == 1 && env.completed == 1
+
+            - name: Get Apk Info
+              id: apk-info
+              uses: hkusu/apk-info-action@v1
+              with:
+                  apk-path: "./temp/app-google-alpha.apk"
+              if: env.ids_same == 1 && env.completed == 1
+
+            - name: Commit Changes
+              run: |
+                  git config --global user.email "${{ secrets.EMAIL }}"
+                  git config --global user.name "${{ github.repository_owner }}"
+                  git add .
+                  git commit -m "Updated dantotsu to latest version"
+              if: env.ids_same == 1 && env.completed == 1
+
+            - name: Push Changes
+              uses: ad-m/github-push-action@master
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+              if: env.ids_same == 1 && env.completed == 1
+
+            - name: Publish Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: ./temp/app-google-alpha.apk
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  tag_name: ${{ steps.apk-info.outputs.version-name }}-${{ github.run_id }}
+                  name: Release ${{ steps.apk-info.outputs.version-name }}-${{ github.run_id }}
+              if: env.ids_same == 1 && env.completed == 1
+
+    rerun:
+        name: Re-run workflow
+        needs: check_for_update
+        if: success() || failure()
+        runs-on: ubuntu-latest
+        steps:
+            - name: Sleep until 5 minutes have passed
+              run: |
+                  sleep 300
+
+            - name: Re-trigger workflow
+              run: gh workflow run checker.yaml
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GH_REPO: ${{ github.repository }}

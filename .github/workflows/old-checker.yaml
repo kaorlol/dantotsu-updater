@@ -101,7 +101,7 @@ jobs:
                   sleep 280
 
             - name: Re-trigger workflow
-              run: gh workflow run main.yml
+              run: gh workflow run old-checker.yaml
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   GH_REPO: ${{ github.repository }}
