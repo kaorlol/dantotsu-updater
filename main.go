@@ -31,7 +31,7 @@ func main() {
 	}
 
 	artifacts := getArtifacts(client, owner, repo, workflowId)
-	artifactId := getArtifactId(artifacts)
+	artifactId := getZipArtifactId(artifacts)
 
 	downloadDantotsu(client, owner, repo, workflowId, artifactId)
 }
@@ -55,7 +55,7 @@ func getArtifacts(client *github.Client, owner, repo string, workflowId int64) [
 	return artifacts.Artifacts
 }
 
-func getArtifactId(Artifacts []*github.Artifact) int64 {
+func getZipArtifactId(Artifacts []*github.Artifact) int64 {
 	for _, artifact := range Artifacts {
 		if artifact.GetName() == "Dantotsu" {
 			return artifact.GetID()
