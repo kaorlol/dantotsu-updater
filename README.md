@@ -16,3 +16,7 @@ Then for the settings:
 3. Set Reconcile version string with version detected OS to `OFF`.
 
 ## Hottest Dantotsu updates
+
+<!-- DANTOTSU_ACTIVITY:start -->
+
+<!-- DANTOTSU_ACTIVITY:end -->
