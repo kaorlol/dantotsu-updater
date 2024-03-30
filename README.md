@@ -15,8 +15,4 @@ Then for the settings:
 2. Set release date as version string (pseudo-version) to `ON`.
 3. Set Reconcile version string with version detected OS to `OFF`.
 
-## Credits
-
--   [me](https://github.com/kaorlol) - all of the go code
--   [chatgpt](https://chat.openai.com/) - most of the workflow shit because its aids 😡😡😡
 
