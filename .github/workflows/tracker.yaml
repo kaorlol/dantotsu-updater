@@ -1,0 +1,34 @@
+name: dantotsu-tracker
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch latest commits
+        id: fetch-commits
+        run: |
+          git fetch https://github.com/sneazy-ibo/Oriax.git dev
+          echo "::set-output name=commits::$(git log --pretty=format:'- %an %h - %s | committed %cr' FETCH_HEAD -n 7)"
+
+      - name: Replace activity section
+        id: replace-activity
+        run: |
+          sed -i '/<!-- DANTOTSU_ACTIVITY:start -->/,/<!-- DANTOTSU_ACTIVITY:end -->/{//!d;}' README.md
+          echo "<!-- DANTOTSU_ACTIVITY:start -->" >> README.md
+          echo "" >> README.md
+          echo "${{ steps.fetch-commits.outputs.commits }}" >> README.md
+          echo "" >> README.md
+          echo "<!-- DANTOTSU_ACTIVITY:end -->" >> README.md
+
+      - name: Commit and push changes
+        if: steps.add-build-status.outputs.build_status != ''
+        run: |
+          git config --global user.email "free.suicides@help.org"
+          git config --global user.name "Mohammed Mustafa Mehmet Al Ameen Ibn Ahmed"
+          git add README.md
+          git commit -m "Update Dantotsu Activity"
+          git push
