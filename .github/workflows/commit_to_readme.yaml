@@ -1,0 +1,21 @@
+name: commit_to_readme
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update Readme with Latest Commits
+        run: |
+          git fetch origin dev
+          output=$(git log --pretty=format:"* %an - %s (%cr)" dev -n 7 | head -n 6)
+          echo "" >> README.md
+          echo "$output" >> README.md
+          echo "" >> README.md
