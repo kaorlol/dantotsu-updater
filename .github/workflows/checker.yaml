@@ -46,7 +46,6 @@ jobs:
 
             - name: Run Main.go
               run: go run main.go
-              if: env.ids_same == 1 && env.completed == 1
 
             - name: Get Apk Info
               id: apk-info

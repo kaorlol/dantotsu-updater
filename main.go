@@ -51,20 +51,23 @@ func getLatestWorkflow(client *github.Client) (int64, string) {
 	}
 
 	latestRun := workflowRuns.WorkflowRuns[0]
-	if latestRun.GetStatus() != "completed" {
-		time.Sleep(10 * time.Second)
-		return getLatestWorkflow(client)
-	}
-
 	workflowId := latestRun.GetID()
 	workflowName := latestRun.GetName()
+
 	if compareWorkflowIds(workflowId) {
 		time.Sleep(10 * time.Second)
 		return getLatestWorkflow(client)
 	}
+	os.Setenv("ids_same", strconv.Itoa(1))
+
+	if latestRun.GetStatus() != "completed" {
+		time.Sleep(10 * time.Second)
+		return getLatestWorkflow(client)
+	}
+	os.Setenv("completed", strconv.Itoa(1))
 
 	log.Printf("Latest workflow run ID: %d, name: %s",workflowId, workflowName)
-	return workflowId,workflowName
+	return workflowId, workflowName
 }
 
 func compareWorkflowIds(workflowId int64) bool {
