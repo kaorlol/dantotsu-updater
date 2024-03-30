@@ -8,6 +8,7 @@ env:
     dantotsu_runs: "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev"
     ids_same: 0
     completed: 0
+    workflow_name: "unknown"
 
 jobs:
     check_for_update:
@@ -34,8 +35,8 @@ jobs:
             - name: Wait Until Completed
               run: |
                   while [ ${{ env.completed }} -eq 0 ]; do
-                  latest_workflow_status=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                      "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].status')
+                    latest_workflow_status=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                        "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].status')
                     if [ "$latest_workflow_status" == "completed" ]; then
                       echo "completed=1" >> $GITHUB_ENV
                     fi
@@ -53,6 +54,11 @@ jobs:
               with:
                   apk-path: "./temp/app-google-alpha.apk"
               if: env.ids_same == 1 && env.completed == 1
+
+            - name: Set Workflow Name
+              run: |
+                  workflow_name=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                      "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].name')
 
             - name: Commit Changes
               run: |
@@ -73,11 +79,11 @@ jobs:
               with:
                   files: ./temp/app-google-alpha.apk
                   token: ${{ secrets.GITHUB_TOKEN }}
-                  tag_name: ${{ steps.apk-info.outputs.version-name }}-${{ github.run_id }}
-                  name: Release ${{ steps.apk-info.outputs.version-name }}-${{ github.run_id }}
+                  tag_name: ${{ steps.apk-info.outputs.version-name }}
+                  name: ${{ env.workflow_name }}
               if: env.ids_same == 1 && env.completed == 1
 
-    rerun:
+    rerun-workflow:
         name: Re-run workflow
         needs: check_for_update
         if: success() || failure()
