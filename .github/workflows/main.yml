@@ -98,7 +98,7 @@ jobs:
         steps:
             - name: Sleep until 5 minutes have passed
               run: |
-                  sleep 300
+                  sleep 280
 
             - name: Re-trigger workflow
               run: gh workflow run main.yml
