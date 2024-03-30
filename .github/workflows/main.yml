@@ -76,10 +76,10 @@ jobs:
             - name: Record job end time
               id: end
               run: |
-                end_time=$(date +%s)
                 start_time=${{ env.start_time }}
-                duration=$((end_time - start_time))
-                echo duration
+                duration=$(( $(date +%s) - $start_time ))
+                echo $(( $(date +%s) - $start_time ))
+                echo $duration
                 echo "duration=$duration" >> $GITHUB_ENV
                 echo ${{ env.duration }}
 
