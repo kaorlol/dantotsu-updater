@@ -6,6 +6,7 @@ on:
 env:
     TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
     ids_same: 0
+    not_completed: 0
 
 jobs:
     check_for_update:
@@ -29,34 +30,56 @@ jobs:
                     echo "ids_same=1" >> $GITHUB_ENV
                   fi
 
-            - name: Check Workflow ID
+            - name: Check Completed
+              id: check_status
               run: |
-                  if [ $ids_same -eq 1 ]; then
-                    echo "Workflow ID has changed, running main.go"
-                    go run main.go
+                  latest_workflow_info=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                      "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev")
+                  latest_workflow_status=$(echo $latest_workflow_info | jq -r '.workflow_runs[0].status')
+                  if [ "$latest_workflow_status" == "completed" ]; then
+                    echo "not_completed=0" >> $GITHUB_ENV
                   else
-                    echo "Workflow ID has not changed"
+                    echo "not_completed=1" >> $GITHUB_ENV
                   fi
+              if: env.ids_same == 1
+
+            - name: Wait Until Completed
+              run: |
+                  while [ ${{ env.not_completed }} -eq 1 ]; do
+                    sleep 60
+                    latest_workflow_info=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                        "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev")
+                    latest_workflow_status=$(echo $latest_workflow_info | jq -r '.workflow_runs[0].status')
+                    if [ "$latest_workflow_status" == "completed" ]; then
+                      echo "not_completed=0" >> $GITHUB_ENV
+                    fi
+                  done
+              if: env.ids_same == 1 && env.not_completed == 1
+
+            - name: Run Main.go
+              run: go run main.go
+              if: env.ids_same == 1 && env.not_completed == 0
 
             - name: Get Apk Info
               id: apk-info
               uses: hkusu/apk-info-action@v1
               with:
                   apk-path: "./temp/app-google-alpha.apk"
-              if: env.ids_same == 1
+              if: env.ids_same == 1 && env.not_completed == 0
+
             - name: Commit Changes
               run: |
                   git config --global user.email "${{ secrets.EMAIL }}"
                   git config --global user.name "${{ github.repository_owner }}"
                   git add .
                   git commit -m "Updated dantotsu to latest version"
-              if: env.ids_same == 1
+              if: env.ids_same == 1 && env.not_completed == 0
 
             - name: Push Changes
               uses: ad-m/github-push-action@master
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
-              if: env.ids_same == 1
+              if: env.ids_same == 1 && env.not_completed == 0
 
             - name: Publish Release
               uses: softprops/action-gh-release@v2
@@ -65,21 +88,20 @@ jobs:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag_name: ${{ steps.apk-info.outputs.version-name }}-${{ github.run_id }}
                   name: Release ${{ steps.apk-info.outputs.version-name }}-${{ github.run_id }}
-              if: env.ids_same == 1
-
+              if: env.ids_same == 1 && env.not_completed == 0
 
     manual-rerun:
-      name: Re-run workflow
-      needs: check_for_update
-      if: success() || failure()
-      runs-on: ubuntu-latest
-      steps:
-        - name: Sleep until 5 minutes have passed
-          run: |
-            sleep 300
-    
-        - name: Re-trigger workflow
-          run: gh workflow run main.yml
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            GH_REPO: ${{ github.repository }}
+        name: Re-run workflow
+        needs: check_for_update
+        if: success() || failure()
+        runs-on: ubuntu-latest
+        steps:
+            - name: Sleep until 5 minutes have passed
+              run: |
+                  sleep 300
+
+            - name: Re-trigger workflow
+              run: gh workflow run main.yml
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GH_REPO: ${{ github.repository }}
