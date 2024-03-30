@@ -10,9 +10,17 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+	"strconv"
 
 	"github.com/google/go-github/v60/github"
 )
+
+const owner = "rebelonion"
+const repo = "Dantotsu"
+const branch = "dev"
+var workspacePath = os.Getenv("GITHUB_WORKSPACE")
+var tempDir = filepath.Join(workspacePath, "temp")
 
 func main() {
 	logFile, err := os.OpenFile("updater.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -20,42 +28,67 @@ func main() {
 		log.Fatalf("Failed to open log file: %v", err)
 	}
 	defer logFile.Close()
+
 	log.SetOutput(logFile)
 	log.SetPrefix("[Dantotsu Updater] ")
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
 	pat := os.Getenv("TOKEN_PAT")
-	if pat == "" {
-		log.Fatalf("GitHub PAT not found in environment variables")
-	}
-
 	client := github.NewClient(nil).WithAuthToken(pat)
 
-	owner := "rebelonion"
-	repo := "Dantotsu"
-	branch := "dev"
-
-	workflowId, name := getLatestWorkflow(client, owner, repo, branch)
+	workflowId, name := getLatestWorkflow(client)
 	os.Setenv("workflow_name", name)
 
-	artifacts := getArtifacts(client, owner, repo, workflowId)
+	artifacts := getArtifacts(client, workflowId)
 	artifactId := getZipArtifactId(artifacts)
-
-	downloadDantotsu(client, owner, repo, workflowId, artifactId)
+	downloadDantotsu(client, workflowId, artifactId)
 }
 
-func getLatestWorkflow(client *github.Client, owner, repo, branch string) (int64, string) {
+func getLatestWorkflow(client *github.Client) (int64, string) {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{Branch: branch})
 	if err != nil {
 		log.Fatalf("Error getting workflow runs: %v", err)
 	}
 
 	latestRun := workflowRuns.WorkflowRuns[0]
-	log.Printf("Latest workflow run ID: %d, status: %s", latestRun.GetID(), latestRun.GetName())
-	return latestRun.GetID(), latestRun.GetName()
+	workflowId := latestRun.GetID()
+	workflowName := latestRun.GetName()
+
+	if compareWorkflowIds(workflowId) {
+		time.Sleep(10 * time.Second)
+		return getLatestWorkflow(client)
+	}
+	os.Setenv("ids_same", strconv.Itoa(1))
+
+	if latestRun.GetStatus() != "completed" {
+		time.Sleep(10 * time.Second)
+		return getLatestWorkflow(client)
+	}
+	os.Setenv("completed", strconv.Itoa(1))
+
+	log.Printf("Latest workflow run ID: %d, name: %s",workflowId, workflowName)
+	return workflowId, workflowName
 }
 
-func getArtifacts(client *github.Client, owner, repo string, workflowId int64) []*github.Artifact {
+func compareWorkflowIds(workflowId int64) bool {
+	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
+	if _, err := os.Stat(workflowIdFile); os.IsNotExist(err) {
+		return false
+	}
+
+	data, err := os.ReadFile(workflowIdFile)
+	if err != nil {
+		log.Fatalf("Error reading workflow ID file: %v", err)
+	}
+
+	oldWorkflowId, err := strconv.ParseInt(string(data), 10, 64)
+	if err != nil {
+		log.Fatalf("Error parsing old workflow ID: %v", err)
+	}
+	return oldWorkflowId == workflowId
+}
+
+func getArtifacts(client *github.Client, workflowId int64) []*github.Artifact {
 	artifacts, _, err := client.Actions.ListWorkflowRunArtifacts(context.Background(), owner, repo, workflowId, &github.ListOptions{})
 	if err != nil {
 		log.Fatalf("Error getting workflow run artifacts: %v", err)
@@ -70,18 +103,16 @@ func getZipArtifactId(Artifacts []*github.Artifact) int64 {
 			return artifact.GetID()
 		}
 	}
+
 	log.Fatalf("Dantotsu artifact not found")
 	return 0
 }
 
-func downloadDantotsu(client *github.Client, owner, repo string, workflowId int64, artifactId int64) {
+func downloadDantotsu(client *github.Client, workflowId int64, artifactId int64) {
 	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifactId, 0)
 	if err != nil {
 		log.Fatalf("Error downloading artifact: %v", err)
 	}
-
-	workspacePath := os.Getenv("GITHUB_WORKSPACE")
-	tempDir := filepath.Join(workspacePath, "temp")
 
 	err = downloadAndExtractAPK(artifactDownloadUrl.String(), tempDir)
 	if err != nil {
