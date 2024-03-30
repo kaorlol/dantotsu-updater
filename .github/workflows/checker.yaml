@@ -9,6 +9,7 @@ env:
     ids_same: 0
     completed: 0
     workflow_name: "unknown"
+    test_ran: 0
 
 jobs:
     check_for_update:
@@ -75,6 +76,15 @@ jobs:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag_name: ${{ steps.apk-info.outputs.version-name }}
                   name: ${{ env.workflow_name }}
+              if: env.ids_same == 1 && env.completed == 1
+
+            - name: Update Readme with Latest Commits
+              run: |
+                git fetch origin dev
+                output=$(git log --pretty=format:"* %an - %s (%cr)" dev -n 7 | head -n 6)
+                echo "" >> README.md
+                echo "$output" >> README.md
+                echo "" >> README.md
               if: env.ids_same == 1 && env.completed == 1
 
     rerun-workflow:

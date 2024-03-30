@@ -52,7 +52,7 @@ func getLatestWorkflow(client *github.Client) (int64, string) {
 
 	latestRun := workflowRuns.WorkflowRuns[0]
 	workflowId := latestRun.GetID()
-	workflowName := latestRun.GetName()
+	workflowName := latestRun.GetDisplayTitle()
 
 	if compareWorkflowIds(workflowId) {
 		time.Sleep(10 * time.Second)
