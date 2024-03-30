@@ -6,11 +6,18 @@ on:
 env:
     TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
     ids_same: 0
+    start_time: 0
+    end_time: 0
+    duration: 0
 
 jobs:
     check_for_update:
         runs-on: ubuntu-latest
         steps:
+            - name: Record job start time
+              id: start
+              run: echo "start_time=$(date +%s)" >> $GITHUB_ENV
+
             - name: Checkout Repository
               uses: actions/checkout@v4
 
@@ -67,6 +74,14 @@ jobs:
                   name: Release ${{ steps.apk-info.outputs.version-name }}-${{ github.run_id }}
               if: env.ids_same == 1
 
+            - name: Record job end time
+              id: end
+              run: |
+                end_time=$(date +%s)
+                start_time=${{ steps.start.outputs.start_time }}
+                duration=$((end_time - start_time))
+                echo "end_time=$end_time" >> $GITHUB_ENV
+
     manual-rerun:
       name: Re-run workflow
       needs: check_for_update
@@ -75,6 +90,7 @@ jobs:
       steps:
         - name: Sleep until 5 minutes have passed
           run: |
+            echo ${{ env.duration }}
             sleep 300
     
         - name: Re-trigger workflow
