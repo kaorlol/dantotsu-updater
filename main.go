@@ -25,26 +25,23 @@ func main() {
 	repo := "Dantotsu"
 	branch := "dev"
 
-	workflowId, name, status := getLatestWorkflow(client, owner, repo, branch)
-	if status != "completed" {
-		panic("Latest workflow run is not completed")
-	}
-
+	workflowId, name := getLatestWorkflow(client, owner, repo, branch)
 	os.Setenv("workflow_name", name)
+
 	artifacts := getArtifacts(client, owner, repo, workflowId)
 	artifactId := getZipArtifactId(artifacts)
 
 	downloadDantotsu(client, owner, repo, workflowId, artifactId)
 }
 
-func getLatestWorkflow(client *github.Client, owner, repo, branch string) (int64, string, string) {
+func getLatestWorkflow(client *github.Client, owner, repo, branch string) (int64, string) {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{Branch: branch})
 	if err != nil {
 		panic("Error getting workflow runs")
 	}
 
 	latestRun := workflowRuns.WorkflowRuns[0]
-	return latestRun.GetID(), latestRun.GetName(), latestRun.GetStatus()
+	return latestRun.GetID(), latestRun.GetName()
 }
 
 func getArtifacts(client *github.Client, owner, repo string, workflowId int64) []*github.Artifact {
