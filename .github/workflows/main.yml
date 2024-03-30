@@ -7,7 +7,7 @@ env:
     TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
     ids_same: 0
     start_time: 0
-    duration: 0
+    elapsed_time: 0
 
 jobs:
     check_for_update:
@@ -76,8 +76,8 @@ jobs:
             - name: Record job end time
               id: end
               run: |
-                echo "duration=$(( $(date +%s) - ${{ env.start_time }} ))" >> $GITHUB_ENV
-                echo ${{ env.duration }}
+                echo "elapsed_time=$(( $(date +%s) - ${{ env.start_time }} ))" >> $GITHUB_ENV
+                echo ${{ env.elapsed_time }}
 
     manual-rerun:
       name: Re-run workflow
@@ -87,7 +87,7 @@ jobs:
       steps:
         - name: Sleep until 5 minutes have passed
           run: |
-            echo ${{ env.duration }}
+            echo ${{ env.elapsed_time }}
             sleep 300
     
         - name: Re-trigger workflow
