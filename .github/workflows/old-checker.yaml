@@ -1,4 +1,4 @@
-name: update-checker
+name: old-update-checker
 
 on:
     workflow_dispatch:
