@@ -130,12 +130,6 @@ func downloadAndExtractAPK(downloadUrl, outputDir string) error {
 
 	for _, f := range r.File {
 		if strings.HasSuffix(f.Name, ".apk") {
-			rc, err := f.Open()
-			if err != nil {
-				return fmt.Errorf("error opening APK file in zip: %v", err)
-			}
-			defer rc.Close()
-
 			extractedAPK := filepath.Join(outputDir, filepath.Base(f.Name))
 			extractedFile, err := os.Create(extractedAPK)
 			if err != nil {
@@ -143,15 +137,21 @@ func downloadAndExtractAPK(downloadUrl, outputDir string) error {
 			}
 			defer extractedFile.Close()
 
+			rc, err := f.Open()
+			if err != nil {
+				return fmt.Errorf("error opening APK file in zip: %v", err)
+			}
+			defer rc.Close()
+
 			_, err = io.Copy(extractedFile, rc)
 			if err != nil {
 				return fmt.Errorf("error writing APK to extracted file: %v", err)
 			}
 
 			log.Printf("APK extracted successfully: %s", extractedAPK)
-			break
+			return nil
 		}
 	}
 
-	return nil
+	return fmt.Errorf("APK file not found in the zip")
 }
