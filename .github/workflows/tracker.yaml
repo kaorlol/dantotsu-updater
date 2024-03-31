@@ -5,6 +5,9 @@ on:
     - cron: '*/5 * * * *'
   workflow_dispatch:
 
+env:
+  DANTOTSU_COMMITS: "https://api.github.com/repos/rebelonion/Dantotsu/commits/dev?per_page=5"
+
 jobs:
   update-readme:
     runs-on: ubuntu-latest
@@ -12,9 +15,8 @@ jobs:
       - name: Fetch latest commits
         id: fetch-commits
         run: |
-          git fetch https://github.com/sneazy-ibo/Oriax.git dev
-          echo "::set-output name=commits::$(git log --pretty=format:'- %an %h - %s | committed %cr' FETCH_HEAD -n 7)"
-
+          latest-commits=$(curl -s ${{ env.DANTOTSU_COMMITS }} | jq -r '.[] | "- \(.commit.author.name) \(.sha) - \(.commit.message) | committed \(.commit.author.date)"' | head -n 5)
+          echo "::set-output name=commits::$latest-commits"
       - name: Replace activity section
         id: replace-activity
         run: |
