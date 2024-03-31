@@ -9,7 +9,6 @@ env:
     ids_same: 0
     completed: 0
     workflow_name: "unknown"
-    test_ran: 0
 
 jobs:
     check_for_update:
@@ -17,33 +16,6 @@ jobs:
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v4
-
-            # - name: Compare Workflow ID
-            #   id: compare_ids
-            #   run: |
-            #     while [ ${{ env.ids_same }} -eq 0 ]; do
-            #         stored_workflow_id=$(cat ./temp/workflow-id.txt)
-            #         latest_workflow_id=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            #             "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].id')
-            #         if [ "$stored_workflow_id" == "$latest_workflow_id" ]; then
-            #           echo "ids_same=0" >> $GITHUB_ENV
-            #         else
-            #           echo "ids_same=1" >> $GITHUB_ENV
-            #         fi
-            #         sleep 10
-            #     done
-
-            # - name: Wait Until Completed
-            #   run: |
-            #       while [ ${{ env.completed }} -eq 0 ]; do
-            #         latest_workflow_status=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            #             "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].status')
-            #         if [ "$latest_workflow_status" == "completed" ]; then
-            #           echo "completed=1" >> $GITHUB_ENV
-            #         fi
-            #         sleep 10
-            #       done
-            #   if: env.ids_same == 1
 
             - name: Run Main.go
               run: go run main.go
@@ -53,7 +25,7 @@ jobs:
               uses: hkusu/apk-info-action@v1
               with:
                   apk-path: "./temp/app-google-alpha.apk"
-              if: env.ids_same == 1 && env.completed == 1
+              if: env.ids_same != 0 && env.completed != 0
 
             - name: Commit Changes
               run: |
@@ -61,13 +33,13 @@ jobs:
                   git config --global user.name "${{ github.repository_owner }}"
                   git add .
                   git commit -m "Updated dantotsu to latest version"
-              if: env.ids_same == 1 && env.completed == 1
+              if: env.ids_same != 0 && env.completed != 0
 
             - name: Push Changes
               uses: ad-m/github-push-action@master
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
-              if: env.ids_same == 1 && env.completed == 1
+              if: env.ids_same != 0 && env.completed != 0
 
             - name: Publish Release
               uses: softprops/action-gh-release@v2
@@ -76,7 +48,7 @@ jobs:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag_name: ${{ steps.apk-info.outputs.version-name }}
                   name: ${{ env.workflow_name }}
-              if: env.ids_same == 1 && env.completed == 1
+              if: env.ids_same != 0 && env.completed != 0
 
     rerun-workflow:
         name: Re-run workflow

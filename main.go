@@ -62,22 +62,17 @@ func getLatestWorkflow(client *github.Client) (int64, string) {
 	workflowId := latestRun.GetID()
 	workflowName := latestRun.GetDisplayTitle()
 
-	println("Workflow ID: ", workflowId)
-	println("Workflow Name: ", workflowName)
-
 	if compareWorkflowIds(workflowId) {
-		println("Workflow ID is the same as the last run, waiting for new run...")
 		time.Sleep(10 * time.Second)
 		return getLatestWorkflow(client)
 	}
-	os.Setenv("ids_same", strconv.Itoa(1))
+	os.Setenv("ids_same", "1")
 
 	if latestRun.GetStatus() != "completed" {
-		println("Latest workflow run is not completed, waiting for completion...")
 		time.Sleep(10 * time.Second)
 		return getLatestWorkflow(client)
 	}
-	os.Setenv("completed", strconv.Itoa(1))
+	os.Setenv("completed", "1")
 
 	log.Printf("Latest workflow run ID: %d, name: %s",workflowId, workflowName)
 	return workflowId, workflowName
@@ -86,19 +81,16 @@ func getLatestWorkflow(client *github.Client) (int64, string) {
 func compareWorkflowIds(workflowId int64) bool {
 	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
 	if _, err := os.Stat(workflowIdFile); os.IsNotExist(err) {
-		println("Workflow ID file does not exist")
 		return false
 	}
 
 	data, err := os.ReadFile(workflowIdFile)
 	if err != nil {
-		println("Error reading workflow ID file")
 		log.Fatalf("Error reading workflow ID file: %v", err)
 	}
 
 	oldWorkflowId, err := strconv.ParseInt(string(data), 10, 64)
 	if err != nil {
-		println("Error parsing old workflow ID")
 		log.Fatalf("Error parsing old workflow ID: %v", err)
 	}
 	return oldWorkflowId == workflowId
