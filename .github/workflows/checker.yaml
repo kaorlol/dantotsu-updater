@@ -6,8 +6,6 @@ on:
 env:
     TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
     dantotsu_runs: "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev"
-    ids_same: 0
-    completed: 0
     workflow_name: "unknown"
 
 jobs:
@@ -25,7 +23,6 @@ jobs:
               uses: hkusu/apk-info-action@v1
               with:
                   apk-path: "./temp/app-google-alpha.apk"
-              if: env.ids_same != 0 && env.completed != 0
 
             - name: Commit Changes
               run: |
@@ -33,13 +30,11 @@ jobs:
                   git config --global user.name "${{ github.repository_owner }}"
                   git add .
                   git commit -m "Updated dantotsu to latest version"
-              if: env.ids_same != 0 && env.completed != 0
 
             - name: Push Changes
               uses: ad-m/github-push-action@master
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
-              if: env.ids_same != 0 && env.completed != 0
 
             - name: Publish Release
               uses: softprops/action-gh-release@v2
@@ -48,7 +43,6 @@ jobs:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag_name: ${{ steps.apk-info.outputs.version-name }}
                   name: ${{ env.workflow_name }}
-              if: env.ids_same != 0 && env.completed != 0
 
     rerun-workflow:
         name: Re-run workflow
