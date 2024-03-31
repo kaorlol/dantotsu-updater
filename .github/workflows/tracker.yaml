@@ -16,15 +16,9 @@ jobs:
       - name: Fetch latest commits
         id: fetch-commits
         run: |
-          commit_info=""
-          while IFS= read -r line; do
-              # Extract commit message and author's name using jq
-              message=$(echo "$line" | jq -r '.commit.message')
-              author=$(echo "$line" | jq -r '.commit.author.name')
-              commit_info+=" - $message by $author"
-          done < <(curl -s https://api.github.com/repos/rebelonion/Dantotsu/commits/dev?per_page=5 | jq -c '.[]')
-          echo "commits=\"$commit_info\"" >> $GITHUB_ENV
-        
+          latest_commits=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \ 
+              ${{ env.DANTOTSU_COMMITS }} | jq -r '.[] | "- \(.commit.message) by \(.commit.author.name)"')
+          echo "commits=\"$latest_commits\"" >> $GITHUB_ENV
 
       - name: Replace activity section
         id: replace-activity
