@@ -33,6 +33,12 @@ func main() {
 	log.SetPrefix("[Dantotsu Updater] ")
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
+	duration := 5*time.Hour + 30*time.Minute
+    time.AfterFunc(duration, func() {
+        log.Println("Program has been running for 5 hours and 30 minutes.")
+		println("Time to end my life :D")
+    })
+
 	println("Starting Dantotsu Updater...")
 
 	pat := os.Getenv("TOKEN_PAT")
