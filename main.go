@@ -97,6 +97,8 @@ func compareWorkflowIds(workflowId int64) bool {
 	}
 
 	oldWorkflowId, err := strconv.ParseInt(string(data), 10, 64)
+	println("Old Workflow ID: ", oldWorkflowId)
+	println("Data: ", data)
 	if err != nil {
 		println("Error parsing old workflow ID")
 		log.Fatalf("Error parsing old workflow ID: %v", err)
