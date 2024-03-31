@@ -55,6 +55,7 @@ func main() {
 func getLatestWorkflow(client *github.Client) (int64, string) {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{ Branch: branch })
 	if err != nil {
+		println("Error getting workflow runs: ", err)
 		log.Fatalf("Error getting workflow runs: %v", err)
 	}
 
