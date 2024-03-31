@@ -41,7 +41,7 @@ func main() {
 	println("Getting latest workflow run...")
 
 	workflowId, name := getLatestWorkflow(client)
-	os.Setenv("workflow_name", name)
+	fmt.Printf("workflow_name=%s >> $GITHUB_ENV\n", name)
 
 	println("Downloading Dantotsu artifact...")
 
