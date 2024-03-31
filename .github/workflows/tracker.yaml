@@ -15,8 +15,8 @@ jobs:
       - name: Fetch latest commits
         id: fetch-commits
         run: |
-          latest-commits=$(curl -s ${{ env.DANTOTSU_COMMITS }} | jq -r '.[] | "- \(.commit.author.name) \(.sha) - \(.commit.message) | committed \(.commit.author.date)"' | head -n 5)
-          echo "::set-output name=commits::$latest-commits"
+          latest_commits=$(curl -s ${{ env.DANTOTSU_COMMITS }} | jq -r '.[]? | select(.commit != null) | "- \(.commit.author.name) \(.sha) - \(.commit.message) | committed \(.commit.author.date)"' | head -n 5)
+          echo "::set-output name=commits::$latest_commits"
       - name: Replace activity section
         id: replace-activity
         run: |
