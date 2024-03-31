@@ -1,0 +1,5 @@
+[Dantotsu Updater] 2024/03/31 03:12:03 main.go:77: Latest workflow run ID: 8490061896, name: feat: adult only media option
+[Dantotsu Updater] 2024/03/31 03:12:03 main.go:110: Found Dantotsu artifact with ID: 1371397593
+[Dantotsu Updater] 2024/03/31 03:12:03 main.go:191: APK extracted successfully: /home/runner/work/dantotsu-updater/dantotsu-updater/temp/app-google-alpha.apk
+[Dantotsu Updater] 2024/03/31 03:12:03 main.go:136: Artifact downloaded and extracted successfully
+[Dantotsu Updater] 2024/03/31 03:12:03 main.go:137: New Workflow ID: 8490061896
