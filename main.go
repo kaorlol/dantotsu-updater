@@ -33,11 +33,15 @@ func main() {
 	log.SetPrefix("[Dantotsu Updater] ")
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
+	println("Starting Dantotsu Updater...")
+
 	pat := os.Getenv("TOKEN_PAT")
 	client := github.NewClient(nil).WithAuthToken(pat)
 
 	workflowId, name := getLatestWorkflow(client)
 	os.Setenv("workflow_name", name)
+
+	println("Downloading Dantotsu artifact...")
 
 	artifacts := getArtifacts(client, workflowId)
 	artifactId := getZipArtifactId(artifacts)
@@ -55,12 +59,14 @@ func getLatestWorkflow(client *github.Client) (int64, string) {
 	workflowName := latestRun.GetDisplayTitle()
 
 	if compareWorkflowIds(workflowId) {
+		println("Workflow ID is the same as the last run, waiting for new run...")
 		time.Sleep(10 * time.Second)
 		return getLatestWorkflow(client)
 	}
 	os.Setenv("ids_same", strconv.Itoa(1))
 
 	if latestRun.GetStatus() != "completed" {
+		println("Latest workflow run is not completed, waiting for completion...")
 		time.Sleep(10 * time.Second)
 		return getLatestWorkflow(client)
 	}
@@ -129,6 +135,7 @@ func downloadDantotsu(client *github.Client, workflowId int64, artifactId int64)
 	log.Printf("New Workflow ID: %d", workflowId)
 }
 
+
 func downloadAndExtractAPK(downloadUrl, outputDir string) error {
 	resp, err := http.Get(downloadUrl)
 	if err != nil {
@@ -161,6 +168,12 @@ func downloadAndExtractAPK(downloadUrl, outputDir string) error {
 
 	for _, f := range r.File {
 		if strings.HasSuffix(f.Name, ".apk") {
+			rc, err := f.Open()
+			if err != nil {
+				return fmt.Errorf("error opening APK file in zip: %v", err)
+			}
+			defer rc.Close()
+
 			extractedAPK := filepath.Join(outputDir, filepath.Base(f.Name))
 			extractedFile, err := os.Create(extractedAPK)
 			if err != nil {
@@ -168,21 +181,15 @@ func downloadAndExtractAPK(downloadUrl, outputDir string) error {
 			}
 			defer extractedFile.Close()
 
-			rc, err := f.Open()
-			if err != nil {
-				return fmt.Errorf("error opening APK file in zip: %v", err)
-			}
-			defer rc.Close()
-
 			_, err = io.Copy(extractedFile, rc)
 			if err != nil {
 				return fmt.Errorf("error writing APK to extracted file: %v", err)
 			}
 
 			log.Printf("APK extracted successfully: %s", extractedAPK)
-			return nil
+			break
 		}
 	}
 
-	return fmt.Errorf("APK file not found in the zip")
+	return nil
 }
