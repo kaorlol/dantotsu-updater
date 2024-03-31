@@ -23,8 +23,7 @@ jobs:
       - name: Replace activity section
         id: replace-activity
         run: |
-          sed -i '/<!-- DANTOTSU_ACTIVITY:start -->/,/<!-- DANTOTSU_ACTIVITY:end -->/{//!d;}' README.md
-          echo "<!-- DANTOTSU_ACTIVITY:start -->" >> README.md
+          echo "<!-- DANTOTSU_ACTIVITY:start -->" > README.md
           echo "" >> README.md
           echo "${{ steps.fetch-commits.outputs.commits }}" >> README.md
           echo "" >> README.md
