@@ -75,16 +75,19 @@ func getLatestWorkflow(client *github.Client) int64 {
 func compareWorkflowIds(workflowId int64) bool {
 	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
 	if _, err := os.Stat(workflowIdFile); os.IsNotExist(err) {
+		print("ok2")
 		return false
 	}
 
 	data, err := os.ReadFile(workflowIdFile)
 	if err != nil {
+		print("ok")
 		log.Fatalf("Error reading workflow ID file: %v", err)
 	}
 
 	oldWorkflowId, err := strconv.ParseInt(string(data), 10, 64)
 	if err != nil {
+		print(string(data))
 		log.Fatalf("Error parsing old workflow ID: %v", err)
 	}
 	return oldWorkflowId == workflowId
