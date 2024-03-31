@@ -16,7 +16,9 @@ jobs:
               uses: actions/checkout@v4
 
             - name: Run Main.go
-              run: go run main.go
+              run: |
+                go run main.go
+                echo "workflow_name=$workflow_name" >> $GITHUB_ENV
 
             - name: Get Apk Info
               id: apk-info

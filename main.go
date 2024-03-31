@@ -66,13 +66,11 @@ func getLatestWorkflow(client *github.Client) (int64, string) {
 		time.Sleep(10 * time.Second)
 		return getLatestWorkflow(client)
 	}
-	os.Setenv("ids_same", "1")
 
 	if latestRun.GetStatus() != "completed" {
 		time.Sleep(10 * time.Second)
 		return getLatestWorkflow(client)
 	}
-	os.Setenv("completed", "1")
 
 	log.Printf("Latest workflow run ID: %d, name: %s",workflowId, workflowName)
 	return workflowId, workflowName
