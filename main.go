@@ -85,9 +85,9 @@ func compareWorkflowIds(workflowId int64) bool {
 		log.Fatalf("Error reading workflow ID file: %v", err)
 	}
 
-	oldWorkflowId, err := strconv.ParseInt(string(data), 10, 64)
+	cleanedData := strings.ReplaceAll(strings.ReplaceAll(string(data), " ", ""), "\n", "")
+	oldWorkflowId, err := strconv.ParseInt(cleanedData, 10, 64)
 	if err != nil {
-		print(string(data))
 		log.Fatalf("Error parsing old workflow ID: %v", err)
 	}
 	return oldWorkflowId == workflowId
