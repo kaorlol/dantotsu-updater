@@ -7,21 +7,18 @@ on:
 
 env:
   DANTOTSU_COMMITS: "https://api.github.com/repos/rebelonion/Dantotsu/commits/dev?per_page=5"
+  commits: ""
 
 jobs:
   update-readme:
     runs-on: ubuntu-latest
     steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install jq
-
       - name: Fetch latest commits
         id: fetch-commits
         run: |
-          latest_commits=$(curl -s ${{ env.DANTOTSU_COMMITS }} | jq -r '.[]? | select(.commit != null) | "- \(.commit.author.name) \(.sha) - \(.commit.message) | committed \(.commit.author.date)"' | head -n 5)
-          echo "::set-output name=commits::$latest_commits"
+          latest_commits=$(curl -s $DANTOTSU_COMMITS | jq -r '.[] | "- " + .commit.message + " by " + .commit.author.name')
+          echo "commits=\"$latest_commits\"" >> $GITHUB_ENV
+
       - name: Replace activity section
         id: replace-activity
         run: |
@@ -35,8 +32,8 @@ jobs:
       - name: Commit and push changes
         if: steps.add-build-status.outputs.build_status != ''
         run: |
-          git config --global user.email "free.suicides@help.org"
-          git config --global user.name "Mohammed Mustafa Mehmet Al Ameen Ibn Ahmed"
+          git config --global user.email "${{ secrets.EMAIL }}"
+          git config --global user.name "${{ github.repository_owner }}"
           git add README.md
           git commit -m "Update Dantotsu Activity"
           git push
