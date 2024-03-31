@@ -6,7 +6,7 @@ on:
 env:
     TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
     dantotsu_runs: "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev"
-    workflow_name: "unknown"
+    workflow_title: "unknown"
 
 jobs:
     check_for_update:
@@ -16,7 +16,11 @@ jobs:
               uses: actions/checkout@v4
 
             - name: Run Main.go
-              run: go run main.go
+              run: |
+                go run main.go
+                workflow_title=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                    "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].display_title')
+                echo "workflow_title=$workflow_title" >> $GITHUB_ENV
 
             - name: Get Apk Info
               id: apk-info
@@ -42,7 +46,7 @@ jobs:
                   files: ./temp/app-google-alpha.apk
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag_name: ${{ steps.apk-info.outputs.version-name }}
-                  name: ${{ env.workflow_name }}
+                  name: ${{ env.workflow_title }}
 
     rerun-workflow:
         name: Re-run workflow

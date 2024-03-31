@@ -39,20 +39,16 @@ func main() {
 	client := github.NewClient(nil).WithAuthToken(pat)
 
 	println("Getting latest workflow run...")
-
-	workflowId, name := getLatestWorkflow(client)
-	fmt.Printf("::set-output name=workflow_name::%s\n", name)
-
-	println("Downloading Dantotsu artifact...")
-
+	workflowId := getLatestWorkflow(client)
 	artifacts := getArtifacts(client, workflowId)
 	artifactId := getZipArtifactId(artifacts)
-	downloadDantotsu(client, workflowId, artifactId)
 
+	println("Downloading Dantotsu artifact...")
+	downloadDantotsu(client, workflowId, artifactId)
 	println("Dantotsu artifact downloaded successfully")
 }
 
-func getLatestWorkflow(client *github.Client) (int64, string) {
+func getLatestWorkflow(client *github.Client) int64 {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{ Branch: branch })
 	if err != nil {
 		log.Fatalf("Error getting workflow runs: %v", err)
@@ -73,7 +69,7 @@ func getLatestWorkflow(client *github.Client) (int64, string) {
 	}
 
 	log.Printf("Latest workflow run ID: %d, name: %s",workflowId, workflowName)
-	return workflowId, workflowName
+	return workflowId
 }
 
 func compareWorkflowIds(workflowId int64) bool {
