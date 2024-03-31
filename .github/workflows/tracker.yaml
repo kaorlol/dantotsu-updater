@@ -7,7 +7,6 @@ on:
 
 env:
   DANTOTSU_COMMITS: "https://api.github.com/repos/rebelonion/Dantotsu/commits/dev?per_page=5"
-  commits: ""
 
 jobs:
   update-readme:
@@ -18,7 +17,7 @@ jobs:
         run: |
           latest_commits=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \ 
               ${{ env.DANTOTSU_COMMITS }} | jq -r '.[] | "- \(.commit.message) by \(.commit.author.name)"')
-          echo "commits=\"$latest_commits\"" >> $GITHUB_ENV
+          echo "::set-output name=commits::$(echo "$latest_commits")"
 
       - name: Replace activity section
         id: replace-activity
