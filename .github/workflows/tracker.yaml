@@ -16,7 +16,7 @@ jobs:
       - name: Fetch latest commits
         id: fetch-commits
         run: |
-          latest_commits=$(curl -s $DANTOTSU_COMMITS | jq -r '.[] | "- " + .commit.message + " by " + .commit.author.name')
+          latest_commits=$(curl -s ${{ env.DANTOTSU_COMMITS }} | jq -r '.[] | "- " + .commit.message + " by " + .commit.author.name')
           echo "commits=\"$latest_commits\"" >> $GITHUB_ENV
 
       - name: Replace activity section
