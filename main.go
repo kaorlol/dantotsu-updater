@@ -54,7 +54,6 @@ func main() {
 
 func getLatestWorkflow(client *github.Client) (int64, string) {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{ Branch: branch })
-	println(workflowRuns)
 	if err != nil {
 		log.Fatalf("Error getting workflow runs: %v", err)
 	}
@@ -62,6 +61,9 @@ func getLatestWorkflow(client *github.Client) (int64, string) {
 	latestRun := workflowRuns.WorkflowRuns[0]
 	workflowId := latestRun.GetID()
 	workflowName := latestRun.GetDisplayTitle()
+
+	println("Workflow ID: ", workflowId)
+	println("Workflow Name: ", workflowName)
 
 	if compareWorkflowIds(workflowId) {
 		println("Workflow ID is the same as the last run, waiting for new run...")
