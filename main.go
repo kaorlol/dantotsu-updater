@@ -65,12 +65,12 @@ func getLatestWorkflow(client *github.Client) int64 {
 	workflowName := latestRun.GetDisplayTitle()
 
 	if compareWorkflowIds(workflowId) {
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 		return getLatestWorkflow(client)
 	}
 
 	if latestRun.GetStatus() != "completed" {
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 		return getLatestWorkflow(client)
 	}
 
@@ -81,13 +81,11 @@ func getLatestWorkflow(client *github.Client) int64 {
 func compareWorkflowIds(workflowId int64) bool {
 	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
 	if _, err := os.Stat(workflowIdFile); os.IsNotExist(err) {
-		print("ok2")
 		return false
 	}
 
 	data, err := os.ReadFile(workflowIdFile)
 	if err != nil {
-		print("ok")
 		log.Fatalf("Error reading workflow ID file: %v", err)
 	}
 
