@@ -36,11 +36,9 @@ func main() {
 	duration := 5*time.Hour + 30*time.Minute
     time.AfterFunc(duration, func() {
         log.Println("Program has been running for 5 hours and 30 minutes.")
-		println("Time to end my life :D")
     })
 
 	println("Starting Dantotsu Updater...")
-
 	pat := os.Getenv("TOKEN_PAT")
 	client := github.NewClient(nil).WithAuthToken(pat)
 
@@ -65,13 +63,11 @@ func getLatestWorkflow(client *github.Client) int64 {
 	workflowName := latestRun.GetDisplayTitle()
 
 	if compareWorkflowIds(workflowId) {
-		println(workflowId)
 		time.Sleep(5 * time.Second)
 		return getLatestWorkflow(client)
 	}
 
 	if latestRun.GetStatus() != "completed" {
-		println(latestRun.GetStatus())
 		time.Sleep(5 * time.Second)
 		return getLatestWorkflow(client)
 	}
