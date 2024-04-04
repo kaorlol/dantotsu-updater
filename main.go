@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
 
 	"github.com/google/go-github/v60/github"
 )
@@ -20,6 +20,26 @@ const repo = "Dantotsu"
 const branch = "dev"
 var workspacePath = os.Getenv("GITHUB_WORKSPACE")
 var tempDir = filepath.Join(workspacePath, "temp")
+
+type WorkflowStatus struct {
+	success []string
+	failure []string
+}
+
+var workflowStatus = WorkflowStatus{
+	success: []string{
+		"completed",
+		"success",
+	},
+	failure: []string{
+		"failure",
+		"timed_out",
+		"action_required",
+		"cancelled",
+		"skipped",
+		"neutral",
+	},
+}
 
 func main() {
 	duration := 5*time.Hour + 30*time.Minute
@@ -32,13 +52,18 @@ func main() {
 	client := github.NewClient(nil).WithAuthToken(pat)
 
 	println("Getting latest workflow run...")
-	workflowId := getLatestWorkflow(client)
+	workflowId, err := getLatestWorkflow(client)
+	if err != nil {
+		println("Error getting latest workflow run. Exiting...")
+		return
+	}
+
 	artifacts := getArtifacts(client, workflowId)
 	artifactId := getZipArtifactId(artifacts)
 	if artifactId == 0 {
 		println("No Dantotsu artifact found. Updating workflow ID...")
 		updateWorkflowId(workflowId)
-		return;
+		return
 	}
 
 	println("Downloading Dantotsu artifact...")
@@ -46,7 +71,26 @@ func main() {
 	println("Dantotsu artifact downloaded successfully")
 }
 
-func getLatestWorkflow(client *github.Client) int64 {
+func getWorkflowStatus(status string) WorkflowStatus {
+	if contains(workflowStatus.success, status) {
+		return workflowStatus
+	}
+	if contains(workflowStatus.failure, status) {
+		return workflowStatus
+	}
+	return WorkflowStatus{}
+}
+
+func contains(status []string, s string) bool {
+	for _, a := range status {
+		if a == s {
+			return true
+		}
+	}
+	return false
+}
+
+func getLatestWorkflow(client *github.Client) (int64, error) {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{ Branch: branch })
 	if err != nil {
 		fmt.Printf("Error getting workflow runs: %v", err)
@@ -61,13 +105,26 @@ func getLatestWorkflow(client *github.Client) int64 {
 		return getLatestWorkflow(client)
 	}
 
-	if latestRun.GetStatus() != "completed" {
-		time.Sleep(5 * time.Second)
-		return getLatestWorkflow(client)
+	// if latestRun.GetStatus() == "failure" {
+	// 	return workflowId, fmt.Errorf("latest workflow run failed")
+	// }
+
+	// if latestRun.GetStatus() != "completed" {
+		// time.Sleep(5 * time.Second)
+		// return getLatestWorkflow(client)
+	// }
+
+	if getWorkflowStatus(latestRun.GetStatus()).failure != nil {
+		return workflowId, fmt.Errorf("latest workflow run failed")
 	}
 
+	if getWorkflowStatus(latestRun.GetStatus()).success != nil {
+		time.Sleep(5 * time.Second)
+		return getLatestWorkflow(client)
+	} 
+
 	fmt.Printf("Latest workflow run ID: %d, name: %s", workflowId, workflowName)
-	return workflowId
+	return workflowId, nil
 }
 
 func compareWorkflowIds(workflowId int64) bool {
