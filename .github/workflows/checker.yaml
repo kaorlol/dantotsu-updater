@@ -18,12 +18,16 @@ jobs:
             - name: Run Main.go
               run: |
                 output=$(go run main.go)
-                last_message=$(echo "$output" | tail -n 1)
-                echo "$output"
-                echo "$last_message"
-                workflow_title=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                    "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].display_title')
-                echo "workflow_title=$workflow_title" >> $GITHUB_ENV
+                if echo "$output" | grep -q "No Dantotsu artifact found"; then
+                  release_info=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                      "https://api.github.com/repos/${{ github.repository }}/releases/latest")
+                  release_name=$(echo $release_info | jq -r '.name')
+                  echo "workflow_title=$release_name" >> $GITHUB_ENV
+                else
+                  workflow_title=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                      "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].display_title')
+                  echo "workflow_title=$workflow_title" >> $GITHUB_ENV
+                fi
 
             - name: Get Apk Info
               id: apk-info
