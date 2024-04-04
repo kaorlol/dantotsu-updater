@@ -48,3 +48,8 @@
 [Dantotsu Updater] 2024/04/03 16:56:44 main.go:190: APK extracted successfully: /home/runner/work/dantotsu-updater/dantotsu-updater/temp/app-google-alpha.apk
 [Dantotsu Updater] 2024/04/03 16:56:44 main.go:135: Artifact downloaded and extracted successfully
 [Dantotsu Updater] 2024/04/03 16:56:44 main.go:136: New Workflow ID: 8542517989
+[Dantotsu Updater] 2024/04/04 08:31:02 main.go:75: Latest workflow run ID: 8551570436, name: fix: make bottom to top work properly (#320)
+[Dantotsu Updater] 2024/04/04 08:31:02 main.go:109: Found Dantotsu artifact with ID: 1384034051
+[Dantotsu Updater] 2024/04/04 08:31:04 main.go:190: APK extracted successfully: /home/runner/work/dantotsu-updater/dantotsu-updater/temp/app-google-alpha.apk
+[Dantotsu Updater] 2024/04/04 08:31:04 main.go:135: Artifact downloaded and extracted successfully
+[Dantotsu Updater] 2024/04/04 08:31:04 main.go:136: New Workflow ID: 8551570436
