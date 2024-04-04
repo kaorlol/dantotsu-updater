@@ -46,6 +46,11 @@ func main() {
 	workflowId := getLatestWorkflow(client)
 	artifacts := getArtifacts(client, workflowId)
 	artifactId := getZipArtifactId(artifacts)
+	if artifactId == 0 {
+		println("No Dantotsu artifact found. Updating workflow ID...")
+		updateWorkflowId(workflowId)
+		return;
+	}
 
 	println("Downloading Dantotsu artifact...")
 	downloadDantotsu(client, workflowId, artifactId)
@@ -115,6 +120,14 @@ func getZipArtifactId(Artifacts []*github.Artifact) int64 {
 	return 0
 }
 
+func updateWorkflowId(workflowId int64) {
+	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
+	err := os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
+	if err != nil {
+		log.Fatalf("Error writing workflow ID to file: %v", err)
+	}
+}
+
 func downloadDantotsu(client *github.Client, workflowId int64, artifactId int64) {
 	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifactId, 0)
 	if err != nil {
@@ -126,11 +139,7 @@ func downloadDantotsu(client *github.Client, workflowId int64, artifactId int64)
 		log.Fatalf("Error downloading and extracting APK: %v", err)
 	}
 
-	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
-	err = os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
-	if err != nil {
-		log.Fatalf("Error writing workflow ID to file: %v", err)
-	}
+	updateWorkflowId(workflowId)
 
 	log.Printf("Artifact downloaded and extracted successfully")
 	log.Printf("New Workflow ID: %d", workflowId)
