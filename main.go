@@ -113,8 +113,6 @@ func getZipArtifactId(Artifacts []*github.Artifact) int64 {
 			return artifact.GetID()
 		}
 	}
-
-	fmt.Println("Dantotsu artifact not found")
 	return 0
 }
 
