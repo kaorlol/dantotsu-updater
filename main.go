@@ -66,7 +66,7 @@ func getLatestWorkflow(client *github.Client) int64 {
 		return getLatestWorkflow(client)
 	}
 
-	fmt.Printf("Latest workflow run ID: %d, name: %s",workflowId, workflowName)
+	fmt.Printf("Latest workflow run ID: %d, name: %s", workflowId, workflowName)
 	return workflowId
 }
 
@@ -105,7 +105,7 @@ func getZipArtifactId(Artifacts []*github.Artifact) int64 {
 		}
 	}
 
-	fmt.Printf("Dantotsu artifact not found")
+	fmt.Println("Dantotsu artifact not found")
 	return 0
 }
 
@@ -130,7 +130,7 @@ func downloadDantotsu(client *github.Client, workflowId int64, artifactId int64)
 
 	updateWorkflowId(workflowId)
 
-	fmt.Printf("Artifact downloaded and extracted successfully")
+	fmt.Println("Artifact downloaded and extracted successfully")
 	fmt.Printf("New Workflow ID: %d", workflowId)
 }
 
