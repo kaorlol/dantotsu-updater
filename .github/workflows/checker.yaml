@@ -19,7 +19,7 @@ jobs:
             - name: Run Main.go
               run: |
                 go run main.go > output.txt  
-                echo "output.txt"
+                cat output.txt
 
 
             # if echo "$output" | grep -q "No Dantotsu artifact found"; then
