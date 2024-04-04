@@ -17,7 +17,10 @@ jobs:
 
             - name: Run Main.go
               run: |
-                go run main.go
+                output=$(go run main.go)
+                last_message=$(echo "$output" | tail -n 1)
+                echo "$output"
+                echo "$last_message"
                 workflow_title=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                     "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].display_title')
                 echo "workflow_title=$workflow_title" >> $GITHUB_ENV
