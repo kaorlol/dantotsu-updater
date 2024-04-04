@@ -21,26 +21,6 @@ const branch = "dev"
 var workspacePath = os.Getenv("GITHUB_WORKSPACE")
 var tempDir = filepath.Join(workspacePath, "temp")
 
-type WorkflowStatus struct {
-	success []string
-	failure []string
-}
-
-var workflowStatus = WorkflowStatus{
-	success: []string{
-		"completed",
-		"success",
-	},
-	failure: []string{
-		"failure",
-		"timed_out",
-		"action_required",
-		"cancelled",
-		"skipped",
-		"neutral",
-	},
-}
-
 func main() {
 	duration := 5*time.Hour + 30*time.Minute
     time.AfterFunc(duration, func() {
@@ -71,25 +51,6 @@ func main() {
 	println("Dantotsu artifact downloaded successfully")
 }
 
-func getWorkflowStatus(status string) WorkflowStatus {
-	if contains(workflowStatus.success, status) {
-		return workflowStatus
-	}
-	if contains(workflowStatus.failure, status) {
-		return workflowStatus
-	}
-	return WorkflowStatus{}
-}
-
-func contains(status []string, s string) bool {
-	for _, a := range status {
-		if a == s {
-			return true
-		}
-	}
-	return false
-}
-
 func getLatestWorkflow(client *github.Client) (int64, error) {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{ Branch: branch })
 	if err != nil {
@@ -105,23 +66,14 @@ func getLatestWorkflow(client *github.Client) (int64, error) {
 		return getLatestWorkflow(client)
 	}
 
-	// if latestRun.GetStatus() == "failure" {
-	// 	return workflowId, fmt.Errorf("latest workflow run failed")
-	// }
-
-	// if latestRun.GetStatus() != "completed" {
-		// time.Sleep(5 * time.Second)
-		// return getLatestWorkflow(client)
-	// }
-
-	if getWorkflowStatus(latestRun.GetStatus()).failure != nil {
+	if latestRun.GetStatus() == "failure" {
 		return workflowId, fmt.Errorf("latest workflow run failed")
 	}
 
-	if getWorkflowStatus(latestRun.GetStatus()).success != nil {
+	if latestRun.GetStatus() != "completed" {
 		time.Sleep(5 * time.Second)
 		return getLatestWorkflow(client)
-	} 
+	}
 
 	fmt.Printf("Latest workflow run ID: %d, name: %s", workflowId, workflowName)
 	return workflowId, nil
