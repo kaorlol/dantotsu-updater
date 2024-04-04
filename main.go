@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,19 +22,9 @@ var workspacePath = os.Getenv("GITHUB_WORKSPACE")
 var tempDir = filepath.Join(workspacePath, "temp")
 
 func main() {
-	logFile, err := os.OpenFile("updater.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatalf("Failed to open log file: %v", err)
-	}
-	defer logFile.Close()
-
-	log.SetOutput(logFile)
-	log.SetPrefix("[Dantotsu Updater] ")
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-
 	duration := 5*time.Hour + 30*time.Minute
     time.AfterFunc(duration, func() {
-        log.Println("Program has been running for 5 hours and 30 minutes.")
+        fmt.Println("Program has been running for 5 hours and 30 minutes.")
     })
 
 	println("Starting Dantotsu Updater...")
@@ -60,7 +49,7 @@ func main() {
 func getLatestWorkflow(client *github.Client) int64 {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{ Branch: branch })
 	if err != nil {
-		log.Fatalf("Error getting workflow runs: %v", err)
+		fmt.Printf("Error getting workflow runs: %v", err)
 	}
 
 	latestRun := workflowRuns.WorkflowRuns[0]
@@ -77,7 +66,7 @@ func getLatestWorkflow(client *github.Client) int64 {
 		return getLatestWorkflow(client)
 	}
 
-	log.Printf("Latest workflow run ID: %d, name: %s",workflowId, workflowName)
+	fmt.Printf("Latest workflow run ID: %d, name: %s",workflowId, workflowName)
 	return workflowId
 }
 
@@ -89,13 +78,13 @@ func compareWorkflowIds(workflowId int64) bool {
 
 	data, err := os.ReadFile(workflowIdFile)
 	if err != nil {
-		log.Fatalf("Error reading workflow ID file: %v", err)
+		fmt.Printf("Error reading workflow ID file: %v", err)
 	}
 
 	cleanedData := strings.ReplaceAll(strings.ReplaceAll(string(data), " ", ""), "\n", "")
 	oldWorkflowId, err := strconv.ParseInt(cleanedData, 10, 64)
 	if err != nil {
-		log.Fatalf("Error parsing old workflow ID: %v", err)
+		fmt.Printf("Error parsing old workflow ID: %v", err)
 	}
 	return oldWorkflowId == workflowId
 }
@@ -103,7 +92,7 @@ func compareWorkflowIds(workflowId int64) bool {
 func getArtifacts(client *github.Client, workflowId int64) []*github.Artifact {
 	artifacts, _, err := client.Actions.ListWorkflowRunArtifacts(context.Background(), owner, repo, workflowId, &github.ListOptions{})
 	if err != nil {
-		log.Fatalf("Error getting workflow run artifacts: %v", err)
+		fmt.Printf("Error getting workflow run artifacts: %v", err)
 	}
 	return artifacts.Artifacts
 }
@@ -111,12 +100,12 @@ func getArtifacts(client *github.Client, workflowId int64) []*github.Artifact {
 func getZipArtifactId(Artifacts []*github.Artifact) int64 {
 	for _, artifact := range Artifacts {
 		if artifact.GetName() == "Dantotsu" {
-			log.Printf("Found Dantotsu artifact with ID: %d", artifact.GetID())
+			fmt.Printf("Found Dantotsu artifact with ID: %d", artifact.GetID())
 			return artifact.GetID()
 		}
 	}
 
-	log.Fatalf("Dantotsu artifact not found")
+	fmt.Printf("Dantotsu artifact not found")
 	return 0
 }
 
@@ -124,25 +113,25 @@ func updateWorkflowId(workflowId int64) {
 	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
 	err := os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
 	if err != nil {
-		log.Fatalf("Error writing workflow ID to file: %v", err)
+		fmt.Printf("Error writing workflow ID to file: %v", err)
 	}
 }
 
 func downloadDantotsu(client *github.Client, workflowId int64, artifactId int64) {
 	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifactId, 0)
 	if err != nil {
-		log.Fatalf("Error downloading artifact: %v", err)
+		fmt.Printf("Error downloading artifact: %v", err)
 	}
 
 	err = downloadAndExtractAPK(artifactDownloadUrl.String(), tempDir)
 	if err != nil {
-		log.Fatalf("Error downloading and extracting APK: %v", err)
+		fmt.Printf("Error downloading and extracting APK: %v", err)
 	}
 
 	updateWorkflowId(workflowId)
 
-	log.Printf("Artifact downloaded and extracted successfully")
-	log.Printf("New Workflow ID: %d", workflowId)
+	fmt.Printf("Artifact downloaded and extracted successfully")
+	fmt.Printf("New Workflow ID: %d", workflowId)
 }
 
 
@@ -196,7 +185,7 @@ func downloadAndExtractAPK(downloadUrl, outputDir string) error {
 				return fmt.Errorf("error writing APK to extracted file: %v", err)
 			}
 
-			log.Printf("APK extracted successfully: %s", extractedAPK)
+			fmt.Printf("APK extracted successfully: %s", extractedAPK)
 			break
 		}
 	}
