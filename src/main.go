@@ -169,8 +169,10 @@ func DownloadDantotsu(client *github.Client, workflowId int64, workflowName stri
 	UpdateWorkflowName(workflowName)
 	UpdateStatus("success")
 
-	fmt.Println("Artifact downloaded and extracted successfully")
-	fmt.Printf("New Workflow ID: %d", workflowId)
+	fmt.Println("APKs downloaded successfully")
+
+	tempZipFile := filepath.Join(tempDir, "temp.zip")
+	os.Remove(tempZipFile)
 }
 
 func DownloadFile(url string, filePath string) error {
@@ -234,7 +236,7 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
 				}
 
 				successfullyDownloaded++
-				fmt.Printf("Downloaded %d/%d APKs\r", successfullyDownloaded, len(downloadTable))
+				fmt.Printf("Downloaded APK: %s\n", download["name"])
 			}
 
 			if len(downloadTable) == 0 || successfullyDownloaded != len(downloadTable) {
@@ -246,6 +248,9 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
 			UpdateWorkflowName(workflowName)
 			UpdateStatus("success")
 			fmt.Println("APKs downloaded successfully")
+
+			tempZipFile := filepath.Join(tempDir, "temp.zip")
+			os.Remove(tempZipFile)
         }
     }
 }
