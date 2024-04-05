@@ -6,7 +6,8 @@ on:
 env:
     TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
     dantotsu_runs: "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev"
-    status: "success"
+    status: success
+    workflow_name: unknown
 
 jobs:
     check_for_update:
@@ -20,7 +21,9 @@ jobs:
                 go run ./src/main.go 
 
                 status=$(cat temp/status.txt)
+                workflow_name=$(cat temp/workflow-name.txt)
                 echo "status=$status" >> $GITHUB_ENV
+                echo "workflow_name=$workflow_name" >> $GITHUB_ENV
 
             - name: Get Apk Info
               id: apk-info

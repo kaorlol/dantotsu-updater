@@ -38,7 +38,7 @@ func main() {
 		println("No Dantotsu artifact found.\nUpdating saved workflow id...")
 		UpdateWorkflowId(workflowId)
 		println("Trying the backup download method...")
-		DownloadApkBackup(client, workflowId)
+		DownloadApkBackup(client, workflowId, workflowName)
 		return
 	}
 
@@ -104,7 +104,7 @@ func GetZipArtifactId(client *github.Client, workflowId int64) int64 {
 	return 0
 }
 
-func DownloadApkBackup(client *github.Client, workflowId int64) {
+func DownloadApkBackup(client *github.Client, workflowId int64, workflowName string) {
     jobs, _, err := client.Actions.ListWorkflowJobs(context.Background(), owner, repo, workflowId, &github.ListWorkflowJobsOptions{})
     if err != nil {
         fmt.Printf("Error getting workflow jobs: %v\n", err)
@@ -144,6 +144,7 @@ func DownloadApkBackup(client *github.Client, workflowId int64) {
 				fmt.Printf("Error downloading APK: %v\n", err)
 			}
 
+			UpdateWorkflowName(workflowName)
 			UpdateStatus("success")
 			fmt.Println("APK downloaded successfully")
         }
