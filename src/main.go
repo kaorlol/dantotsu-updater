@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"regexp"
 
 	"github.com/google/go-github/v60/github"
 )
@@ -19,6 +20,7 @@ const owner = "rebelonion"
 const repo = "Dantotsu"
 const branch = "dev"
 
+var discordLinkRegex = regexp.MustCompile(`https://cdn\.discordapp\.com/attachments/.*?/.*?/.*?\.apk.?ex=\d+\w+&is=\d+\w+&hm=\d+\w+&`)
 var tempDir = GetTempFolder()
 var tokenPat = GetGitHubToken()
 
@@ -26,14 +28,14 @@ func main() {
 	println("Starting Dantotsu Updater...")
 	client := github.NewClient(nil).WithAuthToken(tokenPat)
 	
-	println("Getting latest workflow job...")
+	println("Getting latest workflow run...")
 	workflowId, workflowName := GetLatestWorkflowInfo(client)
 	artifactId := GetZipArtifactId(client, workflowId)
 	if artifactId == 0 {
 		println("No Dantotsu artifact found.\nUpdating saved workflow id...")
 		UpdateWorkflowId(workflowId)
-		println("Updating saved status...")
-		UpdateStatus("failed")
+		println("Trying the backup download method...")
+		DownloadApkBackup(client, workflowId)
 		return
 	}
 
@@ -52,19 +54,18 @@ func GetTempFolder() string {
 
 func GetGitHubToken() string {
 	tokenPat := os.Getenv("TOKEN_PAT")
-	if tokenPat != "" {
-		return tokenPat
+	if tokenPat == "" {
+		token_pat_file := filepath.Join(".", "github_pat.txt")
+		data, _ := os.ReadFile(token_pat_file)
+		return string(data)
 	}
-
-	token_pat_file := filepath.Join(".", "github_pat.txt")
-	data, _ := os.ReadFile(token_pat_file)
-	return string(data)
+	return tokenPat
 }
 
 func GetLatestWorkflowInfo(client *github.Client) (int64, string) {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{ Branch: branch })
 	if err != nil {
-		fmt.Printf("Error getting workflow jobs: %v", err)
+		fmt.Printf("Error getting workflow runs: %v", err)
 	}
 
 	latestRun := workflowRuns.WorkflowRuns[0]
@@ -80,14 +81,14 @@ func GetLatestWorkflowInfo(client *github.Client) (int64, string) {
 		return GetLatestWorkflowInfo(client)
 	}
 
-	fmt.Printf("Found new workflow job '%s'\n", workflowName)
+	fmt.Printf("Found new workflow run '%s'\n", workflowName)
 	return workflowId, workflowName
 }
 
 func GetZipArtifactId(client *github.Client, workflowId int64) int64 {
 	artifacts, _, err := client.Actions.ListWorkflowRunArtifacts(context.Background(), owner, repo, workflowId, &github.ListOptions{})
 	if err != nil {
-		fmt.Printf("Error getting workflow job artifacts: %v\n", err)
+		fmt.Printf("Error getting workflow run artifacts: %v\n", err)
 	}
 
 	for _, artifact := range artifacts.Artifacts {
@@ -98,6 +99,62 @@ func GetZipArtifactId(client *github.Client, workflowId int64) int64 {
 	}
 
 	return 0
+}
+
+func DownloadApkBackup(client *github.Client, workflowId int64) {
+    jobs, _, err := client.Actions.ListWorkflowJobs(context.Background(), owner, repo, workflowId, &github.ListWorkflowJobsOptions{})
+    if err != nil {
+        fmt.Printf("Error getting workflow jobs: %v\n", err)
+    }
+
+    for _, job := range jobs.Jobs {
+        if job.GetName() == "build" {
+            fmt.Printf("Found build job with ID: %d\n", job.GetID())
+
+            logs, _, err := client.Actions.GetWorkflowJobLogs(context.Background(), owner, repo, job.GetID(), 0)
+            if err != nil {
+                fmt.Printf("Error getting job logs: %v\n", err)
+            }
+
+            logUrl := logs.String()
+			logText, err := http.Get(logUrl)
+			if err != nil {
+				fmt.Printf("Error requesting job logs: %v\n", err)
+			}
+
+			downloadLink := GetDiscordLinks(logText.Body)[0]
+			fmt.Printf("Found Discord download link: %s\n", downloadLink)
+
+			resp, err := http.Get(downloadLink)
+			if err != nil {
+				fmt.Printf("Error requesting download link: %v\n", err)
+			}
+
+			if resp.StatusCode == 404 {
+				fmt.Println("Download link expired")
+				UpdateStatus("failed")
+				return
+			}
+
+			err = DownloadFile(downloadLink, filepath.Join(tempDir, "dantotsu.apk"))
+			if err != nil {
+				fmt.Printf("Error downloading APK: %v\n", err)
+			}
+
+			UpdateStatus("success")
+			fmt.Println("APK downloaded successfully")
+        }
+    }
+}
+
+func GetDiscordLinks(logText io.ReadCloser) []string {
+	logBytes, err := io.ReadAll(logText)
+	if err != nil {
+		fmt.Printf("Error reading log text: %v\n", err)
+	}
+
+	discordLinks := discordLinkRegex.FindAllString(string(logBytes), -1)
+	return discordLinks
 }
 
 func UpdateWorkflowId(workflowId int64) {
@@ -130,7 +187,7 @@ func DownloadDantotsu(client *github.Client, workflowId int64, workflowName stri
 		fmt.Printf("Error downloading artifact: %v\n", err)
 	}
 
-	err = downloadAndExtractAPK(artifactDownloadUrl.String(), tempDir)
+	err = DownloadAndExtractAPK(artifactDownloadUrl.String(), tempDir)
 	if err != nil {
 		fmt.Printf("Error downloading and extracting APK: %v\n", err)
 	}
@@ -143,8 +200,28 @@ func DownloadDantotsu(client *github.Client, workflowId int64, workflowName stri
 	fmt.Printf("New Workflow ID: %d", workflowId)
 }
 
+func DownloadFile(url string, filePath string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 
-func downloadAndExtractAPK(downloadUrl, outputDir string) error {
+	out, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DownloadAndExtractAPK(downloadUrl, outputDir string) error {
 	resp, err := http.Get(downloadUrl)
 	if err != nil {
 		return fmt.Errorf("error downloading APK: %v", err)
@@ -182,7 +259,7 @@ func downloadAndExtractAPK(downloadUrl, outputDir string) error {
 			}
 			defer rc.Close()
 
-			extractedAPK := filepath.Join(outputDir, filepath.Base(f.Name))
+			extractedAPK := filepath.Join(outputDir, "dantotsu.apk")
 			extractedFile, err := os.Create(extractedAPK)
 			if err != nil {
 				return fmt.Errorf("error creating extracted APK file: %v", err)

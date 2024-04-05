@@ -50,18 +50,18 @@ jobs:
                   name: cat ./temp/workflow-name.txt
               if: ${{ env.status == 'success' }}
 
-    # rerun-workflow:
-    #     name: Re-run workflow
-    #     needs: check_for_update
-    #     if: success() || failure()
-    #     runs-on: ubuntu-latest
-    #     steps:
-    #         - name: Sleep until 5 minutes have passed
-    #           run: |
-    #               sleep 300
+    rerun-workflow:
+        name: Re-run workflow
+        needs: check_for_update
+        if: success() || failure()
+        runs-on: ubuntu-latest
+        steps:
+            - name: Sleep until 5 minutes have passed
+              run: |
+                  sleep 300
 
-    #         - name: Re-trigger workflow
-    #           run: gh workflow run checker.yaml
-    #           env:
-    #               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #               GH_REPO: ${{ github.repository }}
+            - name: Re-trigger workflow
+              run: gh workflow run checker.yaml
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GH_REPO: ${{ github.repository }}
