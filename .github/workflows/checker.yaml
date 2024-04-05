@@ -6,7 +6,7 @@ on:
 env:
     TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
     dantotsu_runs: "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev"
-    workflow_title: "unknown"
+    status: "success"
 
 jobs:
     check_for_update:
@@ -15,33 +15,19 @@ jobs:
             - name: Checkout Repository
               uses: actions/checkout@v4
 
-
             - name: Run Main.go
               run: |
-                go run main.go > output.txt  
-                cat output.txt
+                go run main.go 
 
-
-            # if echo "$output" | grep -q "No Dantotsu artifact found"; then
-            #   echo "No Dantotsu artifact found"
-            # else
-            #   echo "Dantotsu artifact found"
-            # fi
-
-            # workflow_title=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            # "${{ env.dantotsu_runs }}" | jq -r '.workflow_runs[0].display_title')
-            # echo "workflow_title=$workflow_title" >> $GITHUB_ENV
-
-            # release_info=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            #           "https://api.github.com/repos/${{ github.repository }}/releases/latest")
-            #       release_name=$(echo $release_info | jq -r '.name')
-            #       echo "workflow_title=$release_name" >> $GITHUB_ENV
+                status=$(cat temp/status.txt)
+                echo "status=$status" >> $GITHUB_ENV
 
             - name: Get Apk Info
               id: apk-info
               uses: hkusu/apk-info-action@v1
               with:
                   apk-path: "./temp/app-google-alpha.apk"
+              if: ${{ env.status == 'success' }}
 
             - name: Commit Changes
               run: |
@@ -61,7 +47,8 @@ jobs:
                   files: ./temp/app-google-alpha.apk
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag_name: ${{ steps.apk-info.outputs.version-name }}
-                  name: ${{ env.workflow_title }}
+                  name: cat ./temp/workflow-name.txt
+              if: ${{ env.status == 'success' }}
 
     # rerun-workflow:
     #     name: Re-run workflow

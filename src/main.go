@@ -18,124 +18,126 @@ import (
 const owner = "rebelonion"
 const repo = "Dantotsu"
 const branch = "dev"
-var workspacePath = os.Getenv("GITHUB_WORKSPACE")
-var tempDir = filepath.Join(workspacePath, "temp")
+
+var tempDir = GetTempFolder()
+var tokenPat = GetGitHubToken()
 
 func main() {
-	duration := 5*time.Hour + 30*time.Minute
-    time.AfterFunc(duration, func() {
-        fmt.Println("Program has been running for 5 hours and 30 minutes.")
-    })
-
 	println("Starting Dantotsu Updater...")
-	pat := os.Getenv("TOKEN_PAT")
-	client := github.NewClient(nil).WithAuthToken(pat)
-
-	println("Getting latest workflow run...")
-	workflowId, err := getLatestWorkflow(client)
-	if err != nil {
-		println("Error getting latest workflow run. Exiting...")
-		return
-	}
-
-	artifacts := getArtifacts(client, workflowId)
-	artifactId := getZipArtifactId(artifacts)
+	client := github.NewClient(nil).WithAuthToken(tokenPat)
+	
+	println("Getting latest workflow job...")
+	workflowId, workflowName := GetLatestWorkflowInfo(client)
+	artifactId := GetZipArtifactId(client, workflowId)
 	if artifactId == 0 {
-		println("No Dantotsu artifact found. Updating workflow ID...")
-		updateWorkflowId(workflowId)
+		println("No Dantotsu artifact found.\nUpdating saved workflow id...")
+		UpdateWorkflowId(workflowId)
+		println("Updating saved status...")
+		UpdateStatus("failed")
 		return
 	}
 
 	println("Downloading Dantotsu artifact...")
-	downloadDantotsu(client, workflowId, artifactId)
+	DownloadDantotsu(client, workflowId, workflowName, artifactId)
 	println("Dantotsu artifact downloaded successfully")
 }
 
-func getLatestWorkflow(client *github.Client) (int64, error) {
+func GetTempFolder() string {
+	workspacePath := os.Getenv("GITHUB_WORKSPACE")
+	if workspacePath != "" {
+		return filepath.Join(workspacePath, "temp");
+	}
+	return filepath.Join(".", "temp");
+}
+
+func GetGitHubToken() string {
+	tokenPat := os.Getenv("TOKEN_PAT")
+	if tokenPat != "" {
+		return tokenPat
+	}
+
+	token_pat_file := filepath.Join(".", "github_pat.txt")
+	data, _ := os.ReadFile(token_pat_file)
+	return string(data)
+}
+
+func GetLatestWorkflowInfo(client *github.Client) (int64, string) {
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{ Branch: branch })
 	if err != nil {
-		fmt.Printf("Error getting workflow runs: %v", err)
+		fmt.Printf("Error getting workflow jobs: %v", err)
 	}
 
 	latestRun := workflowRuns.WorkflowRuns[0]
 	workflowId := latestRun.GetID()
+	workflowStatus := latestRun.GetStatus()
 	workflowName := latestRun.GetDisplayTitle()
 
-	if compareWorkflowIds(workflowId) {
+	savedIdFile := filepath.Join(tempDir, "workflow-id.txt")
+	savedIdBytes, _ := os.ReadFile(savedIdFile)
+	savedWorkflowId, _ := strconv.ParseInt(string(savedIdBytes), 10, 64)
+	if savedWorkflowId == workflowId || workflowStatus != "completed" {
 		time.Sleep(5 * time.Second)
-		return getLatestWorkflow(client)
+		return GetLatestWorkflowInfo(client)
 	}
 
-	if latestRun.GetStatus() == "failure" {
-		return workflowId, fmt.Errorf("latest workflow run failed")
-	}
-
-	if latestRun.GetStatus() != "completed" {
-		time.Sleep(5 * time.Second)
-		return getLatestWorkflow(client)
-	}
-
-	fmt.Printf("Latest workflow run ID: %d, name: %s", workflowId, workflowName)
-	return workflowId, nil
+	fmt.Printf("Found new workflow job '%s'\n", workflowName)
+	return workflowId, workflowName
 }
 
-func compareWorkflowIds(workflowId int64) bool {
-	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
-	if _, err := os.Stat(workflowIdFile); os.IsNotExist(err) {
-		return false
-	}
-
-	data, err := os.ReadFile(workflowIdFile)
-	if err != nil {
-		fmt.Printf("Error reading workflow ID file: %v", err)
-	}
-
-	cleanedData := strings.ReplaceAll(strings.ReplaceAll(string(data), " ", ""), "\n", "")
-	oldWorkflowId, err := strconv.ParseInt(cleanedData, 10, 64)
-	if err != nil {
-		fmt.Printf("Error parsing old workflow ID: %v", err)
-	}
-	return oldWorkflowId == workflowId
-}
-
-func getArtifacts(client *github.Client, workflowId int64) []*github.Artifact {
+func GetZipArtifactId(client *github.Client, workflowId int64) int64 {
 	artifacts, _, err := client.Actions.ListWorkflowRunArtifacts(context.Background(), owner, repo, workflowId, &github.ListOptions{})
 	if err != nil {
-		fmt.Printf("Error getting workflow run artifacts: %v", err)
+		fmt.Printf("Error getting workflow job artifacts: %v\n", err)
 	}
-	return artifacts.Artifacts
-}
 
-func getZipArtifactId(Artifacts []*github.Artifact) int64 {
-	for _, artifact := range Artifacts {
+	for _, artifact := range artifacts.Artifacts {
 		if artifact.GetName() == "Dantotsu" {
-			fmt.Printf("Found Dantotsu artifact with ID: %d", artifact.GetID())
+			fmt.Printf("Found Dantotsu artifact with ID: %d\n", artifact.GetID())
 			return artifact.GetID()
 		}
 	}
+
 	return 0
 }
 
-func updateWorkflowId(workflowId int64) {
+func UpdateWorkflowId(workflowId int64) {
 	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
 	err := os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
 	if err != nil {
-		fmt.Printf("Error writing workflow ID to file: %v", err)
+		fmt.Printf("Error writing workflow ID to file: %v\n", err)
 	}
 }
 
-func downloadDantotsu(client *github.Client, workflowId int64, artifactId int64) {
+func UpdateWorkflowName(workflowName string) {
+	workflowNameFile := filepath.Join(tempDir, "workflow-name.txt")
+	err := os.WriteFile(workflowNameFile, []byte(workflowName), os.ModePerm)
+	if err != nil {
+		fmt.Printf("Error writing workflow name to file: %v\n", err)
+	}
+}
+
+func UpdateStatus(status string) {
+	statusFile := filepath.Join(tempDir, "status.txt")
+	err := os.WriteFile(statusFile, []byte(status), os.ModePerm)
+	if err != nil {
+		fmt.Printf("Error writing status to file: %v\n", err)
+	}
+}
+
+func DownloadDantotsu(client *github.Client, workflowId int64, workflowName string, artifactId int64) {
 	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifactId, 0)
 	if err != nil {
-		fmt.Printf("Error downloading artifact: %v", err)
+		fmt.Printf("Error downloading artifact: %v\n", err)
 	}
 
 	err = downloadAndExtractAPK(artifactDownloadUrl.String(), tempDir)
 	if err != nil {
-		fmt.Printf("Error downloading and extracting APK: %v", err)
+		fmt.Printf("Error downloading and extracting APK: %v\n", err)
 	}
 
-	updateWorkflowId(workflowId)
+	UpdateWorkflowId(workflowId)
+	UpdateWorkflowName(workflowName)
+	UpdateStatus("success")
 
 	fmt.Println("Artifact downloaded and extracted successfully")
 	fmt.Printf("New Workflow ID: %d", workflowId)
@@ -192,7 +194,7 @@ func downloadAndExtractAPK(downloadUrl, outputDir string) error {
 				return fmt.Errorf("error writing APK to extracted file: %v", err)
 			}
 
-			fmt.Printf("APK extracted successfully: %s", extractedAPK)
+			fmt.Printf("APK extracted successfully: %s\n", extractedAPK)
 			break
 		}
 	}
