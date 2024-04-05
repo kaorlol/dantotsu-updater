@@ -21,13 +21,17 @@ import (
 // TODO: Make the 'temp' folder be actually temporary, so it deletes after the workflow is done. 
 // TODO: Make workflow-id be stored in cache somehow.
 
-const owner = "rebelonion"
-const repo = "Dantotsu"
-const branch = "dev"
+const (
+	owner = "rebelonion"
+	repo = "Dantotsu"
+	branch = "dev"
+)
 
-var discordLinkRegex = regexp.MustCompile(`https://cdn\.discordapp\.com/attachments/\d+/\d+/(app-google-.*?)\?ex=.*?&is=.*?&hm=.*?&`)
-var tempDir = GetTempFolder()
-var tokenPat = GetGitHubToken()
+var (
+	discordLinkRegex = regexp.MustCompile(`https://cdn\.discordapp\.com/attachments/\d+/\d+/(app-google-.*?)\?ex=.*?&is=.*?&hm=.*?&`)
+	tempDir = GetTempFolder()
+	tokenPat = GetGitHubToken()
+)
 
 func main() {
 	println("Starting Dantotsu Updater...")
@@ -97,13 +101,97 @@ func GetZipArtifactId(client *github.Client, workflowId int64) int64 {
 	}
 
 	for _, artifact := range artifacts.Artifacts {
-		if artifact.GetName() == "Dantotsu" {
+		if artifact.GetName() == "Dantotsu-Split" {
 			fmt.Printf("Found Dantotsu artifact with ID: %d\n", artifact.GetID())
 			return artifact.GetID()
 		}
 	}
 
 	return 0
+}
+
+func GetDiscordLinks(logText io.ReadCloser) []map[string]string {
+	logBytes, err := io.ReadAll(logText)
+	if err != nil {
+		fmt.Printf("Error reading log text: %v\n", err)
+	}
+
+	matches := discordLinkRegex.FindAllStringSubmatch(string(logBytes), -1)
+	tables := make([]map[string]string, 0)
+
+	for _, match := range matches {
+		table := map[string]string{
+			"name": match[1],
+			"link": match[0],
+		}
+		tables = append(tables, table)
+    }
+
+    return tables
+}
+
+func UpdateWorkflowId(workflowId int64) {
+	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
+	err := os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
+	if err != nil {
+		fmt.Printf("Error writing workflow ID to file: %v\n", err)
+	}
+}
+
+func UpdateWorkflowName(workflowName string) {
+	workflowNameFile := filepath.Join(tempDir, "workflow-name.txt")
+	err := os.WriteFile(workflowNameFile, []byte(workflowName), os.ModePerm)
+	if err != nil {
+		fmt.Printf("Error writing workflow name to file: %v\n", err)
+	}
+}
+
+func UpdateStatus(status string) {
+	statusFile := filepath.Join(tempDir, "status.txt")
+	err := os.WriteFile(statusFile, []byte(status), os.ModePerm)
+	if err != nil {
+		fmt.Printf("Error writing status to file: %v\n", err)
+	}
+}
+
+func DownloadDantotsu(client *github.Client, workflowId int64, workflowName string, artifactId int64) {
+	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifactId, 0)
+	if err != nil {
+		fmt.Printf("Error downloading artifact: %v\n", err)
+	}
+
+	err = DownloadAndExtractAPKs(artifactDownloadUrl.String(), tempDir)
+	if err != nil {
+		fmt.Printf("Error downloading and extracting APK: %v\n", err)
+	}
+
+	UpdateWorkflowId(workflowId)
+	UpdateWorkflowName(workflowName)
+	UpdateStatus("success")
+
+	fmt.Println("Artifact downloaded and extracted successfully")
+	fmt.Printf("New Workflow ID: %d", workflowId)
+}
+
+func DownloadFile(url string, filePath string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func DownloadApkBackup(client *github.Client, workflowId int64, workflowName string) {
@@ -162,91 +250,7 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
     }
 }
 
-func GetDiscordLinks(logText io.ReadCloser) []map[string]string {
-	logBytes, err := io.ReadAll(logText)
-	if err != nil {
-		fmt.Printf("Error reading log text: %v\n", err)
-	}
-
-	matches := discordLinkRegex.FindAllStringSubmatch(string(logBytes), -1)
-	tables := make([]map[string]string, 0)
-
-	for _, match := range matches {
-		table := map[string]string{
-			"name": match[1],
-			"link": match[0],
-		}
-		tables = append(tables, table)
-    }
-
-    return tables
-}
-
-func UpdateWorkflowId(workflowId int64) {
-	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
-	err := os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
-	if err != nil {
-		fmt.Printf("Error writing workflow ID to file: %v\n", err)
-	}
-}
-
-func UpdateWorkflowName(workflowName string) {
-	workflowNameFile := filepath.Join(tempDir, "workflow-name.txt")
-	err := os.WriteFile(workflowNameFile, []byte(workflowName), os.ModePerm)
-	if err != nil {
-		fmt.Printf("Error writing workflow name to file: %v\n", err)
-	}
-}
-
-func UpdateStatus(status string) {
-	statusFile := filepath.Join(tempDir, "status.txt")
-	err := os.WriteFile(statusFile, []byte(status), os.ModePerm)
-	if err != nil {
-		fmt.Printf("Error writing status to file: %v\n", err)
-	}
-}
-
-func DownloadDantotsu(client *github.Client, workflowId int64, workflowName string, artifactId int64) {
-	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifactId, 0)
-	if err != nil {
-		fmt.Printf("Error downloading artifact: %v\n", err)
-	}
-
-	err = DownloadAndExtractAPK(artifactDownloadUrl.String(), tempDir)
-	if err != nil {
-		fmt.Printf("Error downloading and extracting APK: %v\n", err)
-	}
-
-	UpdateWorkflowId(workflowId)
-	UpdateWorkflowName(workflowName)
-	UpdateStatus("success")
-
-	fmt.Println("Artifact downloaded and extracted successfully")
-	fmt.Printf("New Workflow ID: %d", workflowId)
-}
-
-func DownloadFile(url string, filePath string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	out, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func DownloadAndExtractAPK(downloadUrl, outputDir string) error {
+func DownloadAndExtractAPKs(downloadUrl, outputDir string) error {
 	resp, err := http.Get(downloadUrl)
 	if err != nil {
 		return fmt.Errorf("error downloading APK: %v", err)
@@ -284,7 +288,7 @@ func DownloadAndExtractAPK(downloadUrl, outputDir string) error {
 			}
 			defer rc.Close()
 
-			extractedAPK := filepath.Join(outputDir, "dantotsu.apk")
+			extractedAPK := filepath.Join(outputDir, f.Name)
 			extractedFile, err := os.Create(extractedAPK)
 			if err != nil {
 				return fmt.Errorf("error creating extracted APK file: %v", err)
@@ -296,8 +300,7 @@ func DownloadAndExtractAPK(downloadUrl, outputDir string) error {
 				return fmt.Errorf("error writing APK to extracted file: %v", err)
 			}
 
-			fmt.Printf("APK extracted successfully: %s\n", extractedAPK)
-			break
+			fmt.Printf("Extracted APK: %s\n", f.Name)
 		}
 	}
 
