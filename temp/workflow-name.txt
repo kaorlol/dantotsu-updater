@@ -1,1 +1,1 @@
-fix: remove duplicate extension code (#322)
+fix: case for empty headers
