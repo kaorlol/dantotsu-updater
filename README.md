@@ -7,3 +7,7 @@ This is written in [go](https://go.dev/) and utilizes github workflows to run th
 ## Usage
 
 Download [Obtainium](https://github.com/ImranR98/Obtainium) then add this repository link to Obtainium.
+
+Make sure to toggle these settings when you add it to Obtainium
+- Verify the 'latest' tag
+- Reconcile string with version detected from OS
