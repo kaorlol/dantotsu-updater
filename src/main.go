@@ -16,14 +16,16 @@ import (
 	"github.com/google/go-github/v60/github"
 )
 
-// TODO: Make it get multiple apk files when multiple are in the zip file or discord.
+// TODO: Make it get multiple apk files when multiple are in the zip file or discord. - Half complete, need them to fix uploading as an artifact.
 // TODO: Use multiple go files and cleanup junk code, make it more optimized, efficient, and robust.
+// TODO: Make the 'temp' folder be actually temporary, so it deletes after the workflow is done. 
+// TODO: Make workflow-id be stored in cache somehow.
 
 const owner = "rebelonion"
 const repo = "Dantotsu"
 const branch = "dev"
 
-var discordLinkRegex = regexp.MustCompile(`https://cdn\.discordapp\.com/attachments/.*?/.*?/.*?\.apk.?ex=\d+\w+&is=\d+\w+&hm=\d+\w+&`)
+var discordLinkRegex = regexp.MustCompile(`https://cdn\.discordapp\.com/attachments/\d+/\d+/(app-google-.*?)\?ex=.*?&is=.*?&hm=.*?&`)
 var tempDir = GetTempFolder()
 var tokenPat = GetGitHubToken()
 
@@ -125,40 +127,59 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
 				fmt.Printf("Error requesting job logs: %v\n", err)
 			}
 
-			downloadLink := GetDiscordLinks(logText.Body)[0]
-			fmt.Printf("Found Discord download link: %s\n", downloadLink)
+			successfullyDownloaded := 0;
+			downloadTable := GetDiscordLinks(logText.Body)
+			for _, download := range downloadTable {
+				resp, err := http.Get(download["link"])
+				if err != nil {
+					fmt.Printf("Error requesting download link: %v\n", err)
+				}
 
-			resp, err := http.Get(downloadLink)
-			if err != nil {
-				fmt.Printf("Error requesting download link: %v\n", err)
+				if resp.StatusCode == 404 {
+					println("Download link expired")
+					continue
+				}
+
+				err = DownloadFile(download["link"], filepath.Join(tempDir, download["name"]))
+				if err != nil {
+					fmt.Printf("Error downloading APK: %v\n", err)
+				}
+
+				successfullyDownloaded++
+				fmt.Printf("Downloaded %d/%d APKs\r", successfullyDownloaded, len(downloadTable))
 			}
 
-			if resp.StatusCode == 404 {
-				fmt.Println("Download link expired")
+			if len(downloadTable) == 0 || successfullyDownloaded != len(downloadTable) {
+				println("Failed to download APKs")
 				UpdateStatus("failed")
 				return
 			}
 
-			err = DownloadFile(downloadLink, filepath.Join(tempDir, "dantotsu.apk"))
-			if err != nil {
-				fmt.Printf("Error downloading APK: %v\n", err)
-			}
-
 			UpdateWorkflowName(workflowName)
 			UpdateStatus("success")
-			fmt.Println("APK downloaded successfully")
+			fmt.Println("APKs downloaded successfully")
         }
     }
 }
 
-func GetDiscordLinks(logText io.ReadCloser) []string {
+func GetDiscordLinks(logText io.ReadCloser) []map[string]string {
 	logBytes, err := io.ReadAll(logText)
 	if err != nil {
 		fmt.Printf("Error reading log text: %v\n", err)
 	}
 
-	discordLinks := discordLinkRegex.FindAllString(string(logBytes), -1)
-	return discordLinks
+	matches := discordLinkRegex.FindAllStringSubmatch(string(logBytes), -1)
+	tables := make([]map[string]string, 0)
+
+	for _, match := range matches {
+		table := map[string]string{
+			"name": match[1],
+			"link": match[0],
+		}
+		tables = append(tables, table)
+    }
+
+    return tables
 }
 
 func UpdateWorkflowId(workflowId int64) {
