@@ -17,7 +17,7 @@ jobs:
 
             - name: Run Main.go
               run: |
-                go run main.go 
+                go run ./src/main.go 
 
                 status=$(cat temp/status.txt)
                 echo "status=$status" >> $GITHUB_ENV
