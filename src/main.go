@@ -16,6 +16,9 @@ import (
 	"github.com/google/go-github/v60/github"
 )
 
+// TODO: Make it get multiple apk files when multiple are in the zip file or discord.
+// TODO: Use multiple go files and cleanup junk code, make it more optimized, efficient, and robust.
+
 const owner = "rebelonion"
 const repo = "Dantotsu"
 const branch = "dev"
