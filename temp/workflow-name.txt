@@ -1,1 +1,1 @@
-feat: send all apks to telegram
+Fixed artifact upload (#326)
