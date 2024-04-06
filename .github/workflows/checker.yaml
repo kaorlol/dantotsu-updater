@@ -23,7 +23,7 @@ jobs:
 
                 status=$(cat info/status.txt)
                 workflow_name=$(cat info/workflow-name.txt)
-                commit_log=$(cat info/commit-log.txt)
+                commit_log=$(cat info/commit_log.txt)
 
                 echo "status=$status" >> $GITHUB_ENV
                 echo "workflow_name=$workflow_name" >> $GITHUB_ENV
