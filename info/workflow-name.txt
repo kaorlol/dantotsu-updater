@@ -1,1 +1,1 @@
-fix: changelogs for telegram
+Merge branch 'dev' of https://github.com/rebelonion/Dantotsu into dev
