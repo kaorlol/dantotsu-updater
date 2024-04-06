@@ -25,6 +25,15 @@ jobs:
                 echo "status=$status" >> $GITHUB_ENV
                 echo "workflow_name=$workflow_name" >> $GITHUB_ENV
 
+            - name: Cache Info
+              uses: actions/cache@v4
+              with:
+                  path: info
+                  key: ${{ runner.os }}-info-${{ hashFiles('info/status.txt') }}-${{ hashFiles('info/workflow-name.txt') }}
+                  restore-keys: |
+                      ${{ runner.os }}-info-
+              
+
             - name: Get Apk Info
               id: apk-info
               uses: hkusu/apk-info-action@v1
