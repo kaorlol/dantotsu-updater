@@ -32,6 +32,18 @@ jobs:
                   apk-path: "./temp/app-google-universal-alpha.apk"
               if: ${{ env.status == 'success' }}
 
+            - name: Commit Changes
+              run: |
+                  git config --global user.email "${{ secrets.EMAIL }}"
+                  git config --global user.name "${{ github.repository_owner }}"
+                  git add . :(exclude)temp
+                  git commit -m "Updated dantotsu to latest version"
+
+            - name: Push Changes
+              uses: ad-m/github-push-action@master
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+
             - name: Publish Release
               uses: softprops/action-gh-release@v2
               with:
@@ -40,22 +52,6 @@ jobs:
                   tag_name: ${{ steps.apk-info.outputs.version-name }}
                   name: ${{ env.workflow_name }}
               if: ${{ env.status == 'success' }}
-
-            - name: Remove Temp Folder
-              run: rm -rf temp
-
-            - name: Commit Changes
-              run: |
-                  git config --global user.email "${{ secrets.EMAIL }}"
-                  git config --global user.name "${{ github.repository_owner }}"
-                  git add .
-                  git commit -m "Updated dantotsu to latest version"
-
-            - name: Push Changes
-              uses: ad-m/github-push-action@master
-              with:
-                  github_token: ${{ secrets.GITHUB_TOKEN }}
-
 
     rerun-workflow:
         name: Re-run workflow

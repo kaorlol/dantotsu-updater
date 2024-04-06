@@ -17,7 +17,6 @@ import (
 )
 
 // TODO: Use multiple go files and cleanup junk code, make it more optimized, efficient, and robust.
-// TODO: Make the 'temp' folder be actually temporary, so it deletes after the workflow is done. 
 // TODO: Make workflow-id be stored in cache somehow.
 
 const (
