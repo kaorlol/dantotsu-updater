@@ -1,1 +1,1 @@
-fix: only show count on releasing/hiatus manga
+fix: changelogs for telegram
