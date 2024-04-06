@@ -16,7 +16,6 @@ import (
 	"github.com/google/go-github/v60/github"
 )
 
-// TODO: Make it get multiple apk files when multiple are in the zip file or discord. - Half complete, need them to fix uploading as an artifact.
 // TODO: Use multiple go files and cleanup junk code, make it more optimized, efficient, and robust.
 // TODO: Make the 'temp' folder be actually temporary, so it deletes after the workflow is done. 
 // TODO: Make workflow-id be stored in cache somehow.
@@ -28,8 +27,9 @@ const (
 )
 
 var (
-	discordLinkRegex = regexp.MustCompile(`https://cdn\.discordapp\.com/attachments/\d+/\d+/(app-google-.*?)\?ex=.*?&is=.*?&hm=.*?&`)
+	discordLinkRegex = regexp.MustCompile(`https://cdn\.discordapp\.com/attachments/\d+/\d+/(app-google-[^?]+)\?ex=[^&]+&is=[^&]+&hm=[^&]+&`)
 	tempDir = GetTempFolder()
+	infoDir = GetInfoFolder()
 	tokenPat = GetGitHubToken()
 )
 
@@ -61,6 +61,14 @@ func GetTempFolder() string {
 	return filepath.Join(".", "temp");
 }
 
+func GetInfoFolder() string {
+	workspacePath := os.Getenv("GITHUB_WORKSPACE")
+	if workspacePath != "" {
+		return filepath.Join(workspacePath, "info");
+	}
+	return filepath.Join(".", "info");
+}
+
 func GetGitHubToken() string {
 	tokenPat := os.Getenv("TOKEN_PAT")
 	if tokenPat == "" {
@@ -82,7 +90,7 @@ func GetLatestWorkflowInfo(client *github.Client) (int64, string) {
 	workflowStatus := latestRun.GetStatus()
 	workflowName := latestRun.GetDisplayTitle()
 
-	savedIdFile := filepath.Join(tempDir, "workflow-id.txt")
+	savedIdFile := filepath.Join(infoDir, "workflow-id.txt")
 	savedIdBytes, _ := os.ReadFile(savedIdFile)
 	savedWorkflowId, _ := strconv.ParseInt(string(savedIdBytes), 10, 64)
 	if savedWorkflowId == workflowId || workflowStatus != "completed" {
@@ -131,7 +139,7 @@ func GetDiscordLinks(logText io.ReadCloser) []map[string]string {
 }
 
 func UpdateWorkflowId(workflowId int64) {
-	workflowIdFile := filepath.Join(tempDir, "workflow-id.txt")
+	workflowIdFile := filepath.Join(infoDir, "workflow-id.txt")
 	err := os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
 	if err != nil {
 		fmt.Printf("Error writing workflow ID to file: %v\n", err)
@@ -139,7 +147,7 @@ func UpdateWorkflowId(workflowId int64) {
 }
 
 func UpdateWorkflowName(workflowName string) {
-	workflowNameFile := filepath.Join(tempDir, "workflow-name.txt")
+	workflowNameFile := filepath.Join(infoDir, "workflow-name.txt")
 	err := os.WriteFile(workflowNameFile, []byte(workflowName), os.ModePerm)
 	if err != nil {
 		fmt.Printf("Error writing workflow name to file: %v\n", err)
@@ -147,7 +155,7 @@ func UpdateWorkflowName(workflowName string) {
 }
 
 func UpdateStatus(status string) {
-	statusFile := filepath.Join(tempDir, "status.txt")
+	statusFile := filepath.Join(infoDir, "status.txt")
 	err := os.WriteFile(statusFile, []byte(status), os.ModePerm)
 	if err != nil {
 		fmt.Printf("Error writing status to file: %v\n", err)
@@ -171,8 +179,7 @@ func DownloadDantotsu(client *github.Client, workflowId int64, workflowName stri
 
 	fmt.Println("APKs downloaded successfully")
 
-	tempZipFile := filepath.Join(tempDir, "temp.zip")
-	os.Remove(tempZipFile)
+	os.Remove(tempDir)
 }
 
 func DownloadFile(url string, filePath string) error {
@@ -249,8 +256,7 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
 			UpdateStatus("success")
 			fmt.Println("APKs downloaded successfully")
 
-			tempZipFile := filepath.Join(tempDir, "temp.zip")
-			os.Remove(tempZipFile)
+			os.Remove(tempDir)
         }
     }
 }
