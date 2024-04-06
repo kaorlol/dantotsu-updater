@@ -32,6 +32,18 @@ jobs:
                   apk-path: "./temp/app-google-universal-alpha.apk"
               if: ${{ env.status == 'success' }}
 
+            - name: Publish Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: ./temp/*.apk
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  tag_name: ${{ steps.apk-info.outputs.version-name }}
+                  name: ${{ env.workflow_name }}
+              if: ${{ env.status == 'success' }}
+
+            - name: Remove temp folder
+              run: rm -rf temp
+
             - name: Commit Changes
               run: |
                   git config --global user.email "${{ secrets.EMAIL }}"
@@ -44,17 +56,6 @@ jobs:
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Publish Release
-              uses: softprops/action-gh-release@v2
-              with:
-                  files: ./temp/*.apk
-                  token: ${{ secrets.GITHUB_TOKEN }}
-                  tag_name: ${{ steps.apk-info.outputs.version-name }}
-                  name: ${{ env.workflow_name }}
-              if: ${{ env.status == 'success' }}
-
-            - name: Remove temp folder
-              run: rm -rf temp
 
     rerun-workflow:
         name: Re-run workflow
