@@ -175,12 +175,12 @@ func UpdateCommitLog(client *github.Client, commitLogId int64) {
 
 	err = DownloadAndExtract(artifactDownloadUrl.String(), infoDir, ".txt")
 	if err != nil {
-		fmt.Printf("Error downloading and extracting APK: %v\n", err)
+		fmt.Printf("Error downloading and extracting commit log: %v\n", err)
 	}
 
 	fmt.Println("Commit log downloaded successfully")
 
-	tempZipFile := filepath.Join(tempDir, "temp.zip")
+	tempZipFile := filepath.Join(infoDir, "temp.zip")
 	os.Remove(tempZipFile)
 }
 
@@ -288,7 +288,7 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
 func DownloadAndExtract(downloadUrl, outputDir string, ext string) error {
 	resp, err := http.Get(downloadUrl)
 	if err != nil {
-		return fmt.Errorf("error downloading %s: %v", ext, err)
+		return fmt.Errorf("error downloading: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -297,7 +297,7 @@ func DownloadAndExtract(downloadUrl, outputDir string, ext string) error {
 		return fmt.Errorf("error creating output directory: %v", err)
 	}
 
-	tempZipFile := filepath.Join(tempDir, "temp.zip")
+	tempZipFile := filepath.Join(outputDir, "temp.zip")
 	out, err := os.Create(tempZipFile)
 	if err != nil {
 		return fmt.Errorf("error creating temporary zip file: %v", err)
@@ -306,7 +306,7 @@ func DownloadAndExtract(downloadUrl, outputDir string, ext string) error {
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return fmt.Errorf("error writing %s to temporary zip file: %v", ext, err)
+		return fmt.Errorf("error writing to temporary zip file: %v", err)
 	}
 
 	r, err := zip.OpenReader(tempZipFile)
@@ -319,23 +319,23 @@ func DownloadAndExtract(downloadUrl, outputDir string, ext string) error {
 		if strings.HasSuffix(f.Name, ext) {
 			rc, err := f.Open()
 			if err != nil {
-				return fmt.Errorf("error opening %s file in zip: %v", ext, err)
+				return fmt.Errorf("error opening file in zip: %v", err)
 			}
 			defer rc.Close()
 
 			extracted := filepath.Join(outputDir, f.Name)
 			extractedFile, err := os.Create(extracted)
 			if err != nil {
-				return fmt.Errorf("error creating extracted %s file: %v", ext, err)
+				return fmt.Errorf("error creating extracted file: %v", err)
 			}
 			defer extractedFile.Close()
 
 			_, err = io.Copy(extractedFile, rc)
 			if err != nil {
-				return fmt.Errorf("error writing %s to extracted file: %v", ext, err)
+				return fmt.Errorf("error writing to extracted file: %v", err)
 			}
 
-			fmt.Printf("Extracted %s: %s\n", ext, f.Name)
+			fmt.Printf("Extracted: %s\n", f.Name)
 		}
 	}
 
