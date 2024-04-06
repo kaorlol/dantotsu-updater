@@ -106,11 +106,18 @@ func GetZipArtifactId(client *github.Client, workflowId int64) int64 {
 		fmt.Printf("Error getting workflow run artifacts: %v\n", err)
 	}
 
+	artifactId, commitLogId := int64(0), int64(0)
 	for _, artifact := range artifacts.Artifacts {
 		if artifact.GetName() == "Dantotsu-Split" {
-			fmt.Printf("Found Dantotsu artifact with ID: %d\n", artifact.GetID())
-			return artifact.GetID()
+			artifactId = artifact.GetID()
+		} else if artifact.GetName() == "commit-log" {
+			commitLogId = artifact.GetID()
 		}
+	}
+
+	if artifactId != 0 && commitLogId != 0 {
+		UpdateCommitLog(client, commitLogId)
+		return artifactId
 	}
 
 	return 0
@@ -160,13 +167,27 @@ func UpdateStatus(status string) {
 	}
 }
 
+func UpdateCommitLog(client *github.Client, commitLogId int64) {
+	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, commitLogId, 0)
+	if err != nil {
+		fmt.Printf("Error downloading artifact: %v\n", err)
+	}
+
+	err = DownloadAndExtract(artifactDownloadUrl.String(), infoDir, ".txt")
+	if err != nil {
+		fmt.Printf("Error downloading and extracting APK: %v\n", err)
+	}
+
+	fmt.Println("Commit log downloaded successfully")
+}
+
 func DownloadDantotsu(client *github.Client, workflowId int64, workflowName string, artifactId int64) {
 	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifactId, 0)
 	if err != nil {
 		fmt.Printf("Error downloading artifact: %v\n", err)
 	}
 
-	err = DownloadAndExtractAPKs(artifactDownloadUrl.String(), tempDir)
+	err = DownloadAndExtract(artifactDownloadUrl.String(), tempDir, ".apk")
 	if err != nil {
 		fmt.Printf("Error downloading and extracting APK: %v\n", err)
 	}
@@ -261,7 +282,7 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
     }
 }
 
-func DownloadAndExtractAPKs(downloadUrl, outputDir string) error {
+func DownloadAndExtract(downloadUrl, outputDir string, ext string) error {
 	resp, err := http.Get(downloadUrl)
 	if err != nil {
 		return fmt.Errorf("error downloading APK: %v", err)
@@ -273,7 +294,7 @@ func DownloadAndExtractAPKs(downloadUrl, outputDir string) error {
 		return fmt.Errorf("error creating output directory: %v", err)
 	}
 
-	tempZipFile := filepath.Join(outputDir, "temp.zip")
+	tempZipFile := filepath.Join(tempDir, "temp.zip")
 	out, err := os.Create(tempZipFile)
 	if err != nil {
 		return fmt.Errorf("error creating temporary zip file: %v", err)
@@ -292,26 +313,26 @@ func DownloadAndExtractAPKs(downloadUrl, outputDir string) error {
 	defer r.Close()
 
 	for _, f := range r.File {
-		if strings.HasSuffix(f.Name, ".apk") {
+		if strings.HasSuffix(f.Name, ext) {
 			rc, err := f.Open()
 			if err != nil {
-				return fmt.Errorf("error opening APK file in zip: %v", err)
+				return fmt.Errorf("error opening %s file in zip: %v", ext, err)
 			}
 			defer rc.Close()
 
-			extractedAPK := filepath.Join(outputDir, f.Name)
-			extractedFile, err := os.Create(extractedAPK)
+			extracted := filepath.Join(outputDir, f.Name)
+			extractedFile, err := os.Create(extracted)
 			if err != nil {
-				return fmt.Errorf("error creating extracted APK file: %v", err)
+				return fmt.Errorf("error creating extracted %s file: %v", ext, err)
 			}
 			defer extractedFile.Close()
 
 			_, err = io.Copy(extractedFile, rc)
 			if err != nil {
-				return fmt.Errorf("error writing APK to extracted file: %v", err)
+				return fmt.Errorf("error writing %s to extracted file: %v", ext, err)
 			}
 
-			fmt.Printf("Extracted APK: %s\n", f.Name)
+			fmt.Printf("Extracted %s: %s\n", ext, f.Name)
 		}
 	}
 
