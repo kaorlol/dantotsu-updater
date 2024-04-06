@@ -179,6 +179,9 @@ func UpdateCommitLog(client *github.Client, commitLogId int64) {
 	}
 
 	fmt.Println("Commit log downloaded successfully")
+
+	tempZipFile := filepath.Join(tempDir, "temp.zip")
+	os.Remove(tempZipFile)
 }
 
 func DownloadDantotsu(client *github.Client, workflowId int64, workflowName string, artifactId int64) {
@@ -285,7 +288,7 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
 func DownloadAndExtract(downloadUrl, outputDir string, ext string) error {
 	resp, err := http.Get(downloadUrl)
 	if err != nil {
-		return fmt.Errorf("error downloading APK: %v", err)
+		return fmt.Errorf("error downloading %s: %v", ext, err)
 	}
 	defer resp.Body.Close()
 
@@ -303,7 +306,7 @@ func DownloadAndExtract(downloadUrl, outputDir string, ext string) error {
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return fmt.Errorf("error writing APK to temporary zip file: %v", err)
+		return fmt.Errorf("error writing %s to temporary zip file: %v", ext, err)
 	}
 
 	r, err := zip.OpenReader(tempZipFile)
