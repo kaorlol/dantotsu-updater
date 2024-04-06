@@ -17,7 +17,6 @@ import (
 )
 
 // TODO: Use multiple go files and cleanup junk code, make it more optimized, efficient, and robust.
-// TODO: Make workflow-id be stored in cache somehow.
 
 const (
 	owner = "rebelonion"
@@ -71,7 +70,7 @@ func GetInfoFolder() string {
 func GetGitHubToken() string {
 	tokenPat := os.Getenv("TOKEN_PAT")
 	if tokenPat == "" {
-		token_pat_file := filepath.Join(".", "github_pat.txt")
+		token_pat_file := filepath.Join(infoDir, "github_pat.txt")
 		data, _ := os.ReadFile(token_pat_file)
 		return string(data)
 	}
