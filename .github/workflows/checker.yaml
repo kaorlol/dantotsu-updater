@@ -20,8 +20,8 @@ jobs:
               run: |
                 go run ./src/main.go 
 
-                status=$(cat temp/status.txt)
-                workflow_name=$(cat temp/workflow-name.txt)
+                status=$(cat info/status.txt)
+                workflow_name=$(cat info/workflow-name.txt)
                 echo "status=$status" >> $GITHUB_ENV
                 echo "workflow_name=$workflow_name" >> $GITHUB_ENV
 
