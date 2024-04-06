@@ -1,1 +1,1 @@
-Merge branch 'dev' of https://github.com/rebelonion/Dantotsu into dev
+fix: Voice artists not showing media
