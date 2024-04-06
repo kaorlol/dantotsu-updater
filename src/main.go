@@ -179,7 +179,8 @@ func DownloadDantotsu(client *github.Client, workflowId int64, workflowName stri
 
 	fmt.Println("APKs downloaded successfully")
 
-	os.Remove(tempDir)
+	tempZipFile := filepath.Join(tempDir, "temp.zip")
+	os.Remove(tempZipFile)
 }
 
 func DownloadFile(url string, filePath string) error {
@@ -256,7 +257,8 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
 			UpdateStatus("success")
 			fmt.Println("APKs downloaded successfully")
 
-			os.Remove(tempDir)
+			tempZipFile := filepath.Join(tempDir, "temp.zip")
+			os.Remove(tempZipFile)
         }
     }
 }

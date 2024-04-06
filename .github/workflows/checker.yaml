@@ -53,6 +53,9 @@ jobs:
                   name: ${{ env.workflow_name }}
               if: ${{ env.status == 'success' }}
 
+            - name: Remove temp folder
+              run: rm -rf temp
+
     rerun-workflow:
         name: Re-run workflow
         needs: check_for_update
