@@ -41,7 +41,7 @@ jobs:
                   name: ${{ env.workflow_name }}
               if: ${{ env.status == 'success' }}
 
-            - name: Remove temp folder
+            - name: Remove Temp Folder
               run: rm -rf temp
 
             - name: Commit Changes
