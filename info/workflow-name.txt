@@ -1,1 +1,1 @@
-fix: fix the fix for the fix for MangaUpdates
+fix: MangaExtensionRepos where AnimeExtensionRepos should be
