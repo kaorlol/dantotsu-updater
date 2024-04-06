@@ -16,6 +16,14 @@ jobs:
             - name: Checkout Repository
               uses: actions/checkout@v4
 
+            - name: Cache Info
+              uses: actions/cache@v4
+              with:
+                  path: info
+                  key: ${{ runner.os }}-info-${{ hashFiles('info/status.txt') }}-${{ hashFiles('info/workflow-name.txt') }}
+                  restore-keys: |
+                      ${{ runner.os }}-info-
+
             - name: Run Main.go
               run: |
                 go run ./src/main.go 
@@ -24,14 +32,6 @@ jobs:
                 workflow_name=$(cat info/workflow-name.txt)
                 echo "status=$status" >> $GITHUB_ENV
                 echo "workflow_name=$workflow_name" >> $GITHUB_ENV
-
-            - name: Cache Info
-              uses: actions/cache@v4
-              with:
-                  path: info
-                  key: ${{ runner.os }}-info-${{ hashFiles('info/status.txt') }}-${{ hashFiles('info/workflow-name.txt') }}
-                  restore-keys: |
-                      ${{ runner.os }}-info-
               
 
             - name: Get Apk Info
