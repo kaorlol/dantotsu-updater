@@ -1,1 +1,1 @@
-feat: AppUpdater can handle splits
+fix: cache upcoming widget data
