@@ -1,1 +1,1 @@
-feat: socials in media
+feat(socials): ratings and progress

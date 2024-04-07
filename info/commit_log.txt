@@ -1,1 +1,1 @@
-● feat: socials in media ~aayush262
+● feat(socials): ratings and progress ~aayush262
