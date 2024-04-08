@@ -1,1 +1,1 @@
-feat(socials): ratings and progress
+fix: got lost in the cherry-picking (#337)

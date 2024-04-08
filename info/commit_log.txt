@@ -1,1 +1,1 @@
-● feat(socials): ratings and progress ~aayush262
+● fix: got lost in the cherry-picking (#337) ~TwistedUmbrellaX%0A● Added Skip Recap Feature (#336) ~tutel%0A● fix: address possible format issues (#331) ~TwistedUmbrellaX%0A● feat: repo editor in extension window (#332) ~TwistedUmbrellaX%0A● feat: add per-widget configuration (#333) ~TwistedUmbrellaX
