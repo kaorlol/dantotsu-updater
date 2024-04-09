@@ -22,6 +22,14 @@ jobs:
               run: |
                 go run ./src/main.go 
                 echo "status=$(cat info/status.txt)" >> $GITHUB_ENV
+            
+            - name: Archive Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: artifacts
+                  path: |
+                      ./info
+                      ./temp
 
             - name: Commit Changes
               run: |
@@ -35,18 +43,8 @@ jobs:
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Get Apk Info
-              id: apk-info
-              uses: hkusu/apk-info-action@v1
-              with:
-                  apk-path: "./temp/app-google-universal-alpha.apk"
-              
-            - name: Save Apk Version to Env-File
-              run: |
-                  echo "apk_version=${{ steps.apk-info.outputs.version-name }}" > version.txt
-
             - name: Run Release
-              run: gh workflow run release.yaml --env-file version.txt
+              run: gh workflow run release.yaml
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   GH_REPO: ${{ github.repository }}
