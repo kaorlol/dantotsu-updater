@@ -8,7 +8,6 @@ env:
     dantotsu_runs: "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev"
     status: failure
     workflow_name: none
-    commit_log: none
 
 jobs:
     check_for_update:
@@ -18,11 +17,12 @@ jobs:
               uses: actions/checkout@v4
 
             - name: Run Main.go
+              id: run-main
               run: |
                 go run ./src/main.go 
                 echo "status=$(cat info/status.txt)" >> $GITHUB_ENV
                 echo "workflow_name=$(cat info/workflow-name.txt)" >> $GITHUB_ENV
-                echo "commit_log=$(cat info/commit-log.txt)" >> $GITHUB_ENV
+                echo "::set-output commit_log=$(cat info/commit-log.txt)"
 
             - name: Get Apk Info
               id: apk-info
@@ -64,7 +64,7 @@ jobs:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag_name: ${{ steps.apk-info.outputs.version-name }}
                   name: ${{ env.workflow_name }}
-                  body: ${{ env.commit_log }}
+                  body: ${{ steps.run-main.outputs.commit_log }}
               if: ${{ env.status == 'success' }}
 
     rerun-workflow:
