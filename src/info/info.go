@@ -80,14 +80,11 @@ func UpdateCommitLog(client *github.Client, commitLogId int64) {
 
 func GetTempDir() string {
 	workspacePath := os.Getenv("GITHUB_WORKSPACE")
-	if workspacePath != "" {
-		return filepath.Join(workspacePath, "temp");
+	if workspacePath == "" {
+		workspacePath = "."
 	}
-
-	tempDir := filepath.Join(".", "temp");
-	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		os.Mkdir(tempDir, os.ModePerm)
-	}
+	tempDir := filepath.Join(workspacePath, "temp")
+	os.MkdirAll(tempDir, os.ModePerm)
 	return tempDir
 }
 
