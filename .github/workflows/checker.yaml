@@ -6,9 +6,7 @@ on:
 env:
     TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
     dantotsu_runs: "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev"
-    status: success
-    workflow_name: unknown
-    commit_log: none
+    status: failure
 
 jobs:
     check_for_update:
@@ -20,14 +18,7 @@ jobs:
             - name: Run Main.go
               run: |
                 go run ./src/main.go 
-
-                status=$(cat info/status.txt)
-                workflow_name=$(cat info/workflow-name.txt)
-                commit_log=$(cat info/commit-log.txt)
-
-                echo "status=$status" >> $GITHUB_ENV
-                echo "workflow_name=$workflow_name" >> $GITHUB_ENV
-                echo "commit_log=$commit_log" >> $GITHUB_ENV
+                echo "status=$(cat info/status.txt)" >> $GITHUB_ENV
 
             - name: Get Apk Info
               id: apk-info
@@ -68,8 +59,10 @@ jobs:
                   files: ./temp/*.apk
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag_name: ${{ steps.apk-info.outputs.version-name }}
-                  name: ${{ env.workflow_name }}
-                  body: ${{ env.commit_log }}
+                  name: |
+                    $(cat info/workflow-name.txt)
+                  body: |
+                     $(cat info/commit-log.txt)
               if: ${{ env.status == 'success' }}
 
     rerun-workflow:
