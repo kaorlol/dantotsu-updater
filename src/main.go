@@ -1,7 +1,6 @@
 package main
 
 import (
-	"archive/zip"
 	"context"
 	"fmt"
 	"io"
@@ -9,76 +8,38 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
-	"regexp"
 
 	"github.com/google/go-github/v60/github"
+	"dantotsu-update/src/downloader"
+	"dantotsu-update/src/info"
 )
 
-// TODO: Use multiple go files and cleanup junk code, make it more optimized, efficient, and robust.
-
-const (
-	owner = "rebelonion"
-	repo = "Dantotsu"
-	branch = "dev"
-)
-
-var (
-	discordLinkRegex = regexp.MustCompile(`https://cdn\.discordapp\.com/attachments/\d+/\d+/(app-google-[^?]+)\?ex=[^&]+&is=[^&]+&hm=[^&]+&`)
-	tempDir = GetTempFolder()
-	infoDir = GetInfoFolder()
-	tokenPat = GetGitHubToken()
-)
+// TODO: Use a JSON file instead of storing info in multiple files.
 
 func main() {
-	println("Starting Dantotsu Updater...")
-	client := github.NewClient(nil).WithAuthToken(tokenPat)
+	client := github.NewClient(nil).WithAuthToken(info.Token)
 	
 	println("Getting latest workflow run...")
 	workflowId, workflowName := GetLatestWorkflowInfo(client)
+	fmt.Printf("Got latest workflow run '%s' with ID: %d\n", workflowName, workflowId)
+
 	artifactId := GetZipArtifactId(client, workflowId)
 	if artifactId == 0 {
 		println("No Dantotsu artifact found.\nUpdating saved workflow id...")
-		UpdateWorkflowId(workflowId)
+		info.UpdateWorkflowId(workflowId)
 		println("Trying the backup download method...")
 		DownloadApkBackup(client, workflowId, workflowName)
 		return
 	}
 
-	println("Downloading Dantotsu artifact...")
+	println("\nDownloading Dantotsu APKs...")
 	DownloadDantotsu(client, workflowId, workflowName, artifactId)
-	println("Dantotsu artifact downloaded successfully")
-}
-
-func GetTempFolder() string {
-	workspacePath := os.Getenv("GITHUB_WORKSPACE")
-	if workspacePath != "" {
-		return filepath.Join(workspacePath, "temp");
-	}
-	return filepath.Join(".", "temp");
-}
-
-func GetInfoFolder() string {
-	workspacePath := os.Getenv("GITHUB_WORKSPACE")
-	if workspacePath != "" {
-		return filepath.Join(workspacePath, "info");
-	}
-	return filepath.Join(".", "info");
-}
-
-func GetGitHubToken() string {
-	tokenPat := os.Getenv("TOKEN_PAT")
-	if tokenPat == "" {
-		token_pat_file := filepath.Join(infoDir, "github_pat.txt")
-		data, _ := os.ReadFile(token_pat_file)
-		return string(data)
-	}
-	return tokenPat
+	println("Finished downloading Dantotsu APKs")
 }
 
 func GetLatestWorkflowInfo(client *github.Client) (int64, string) {
-	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, "beta.yml", &github.ListWorkflowRunsOptions{ Branch: branch })
+	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), info.Owner, info.Repo, "beta.yml", &github.ListWorkflowRunsOptions{ Branch: info.Branch })
 	if err != nil {
 		fmt.Printf("Error getting workflow runs: %v", err)
 	}
@@ -88,20 +49,18 @@ func GetLatestWorkflowInfo(client *github.Client) (int64, string) {
 	workflowStatus := latestRun.GetStatus()
 	workflowName := latestRun.GetDisplayTitle()
 
-	savedIdFile := filepath.Join(infoDir, "workflow-id.txt")
+	savedIdFile := filepath.Join(info.InfoDir, "workflow-id.txt")
 	savedIdBytes, _ := os.ReadFile(savedIdFile)
 	savedWorkflowId, _ := strconv.ParseInt(string(savedIdBytes), 10, 64)
 	if savedWorkflowId == workflowId || workflowStatus != "completed" {
 		time.Sleep(5 * time.Second)
 		return GetLatestWorkflowInfo(client)
 	}
-
-	fmt.Printf("Found new workflow run '%s'\n", workflowName)
 	return workflowId, workflowName
 }
 
 func GetZipArtifactId(client *github.Client, workflowId int64) int64 {
-	artifacts, _, err := client.Actions.ListWorkflowRunArtifacts(context.Background(), owner, repo, workflowId, &github.ListOptions{})
+	artifacts, _, err := client.Actions.ListWorkflowRunArtifacts(context.Background(), info.Owner, info.Repo, workflowId, &github.ListOptions{})
 	if err != nil {
 		fmt.Printf("Error getting workflow run artifacts: %v\n", err)
 	}
@@ -116,7 +75,7 @@ func GetZipArtifactId(client *github.Client, workflowId int64) int64 {
 	}
 
 	if artifactId != 0 && commitLogId != 0 {
-		UpdateCommitLog(client, commitLogId)
+		info.UpdateCommitLog(client, commitLogId)
 		return artifactId
 	}
 
@@ -129,7 +88,7 @@ func GetDiscordLinks(logText io.ReadCloser) []map[string]string {
 		fmt.Printf("Error reading log text: %v\n", err)
 	}
 
-	matches := discordLinkRegex.FindAllStringSubmatch(string(logBytes), -1)
+	matches := info.DiscordLinkRegex.FindAllStringSubmatch(string(logBytes), -1)
 	tables := make([]map[string]string, 0)
 
 	for _, match := range matches {
@@ -143,66 +102,20 @@ func GetDiscordLinks(logText io.ReadCloser) []map[string]string {
     return tables
 }
 
-func UpdateWorkflowId(workflowId int64) {
-	workflowIdFile := filepath.Join(infoDir, "workflow-id.txt")
-	err := os.WriteFile(workflowIdFile, []byte(fmt.Sprintf("%d", workflowId)), os.ModePerm)
-	if err != nil {
-		fmt.Printf("Error writing workflow ID to file: %v\n", err)
-	}
-}
-
-func UpdateWorkflowName(workflowName string) {
-	workflowNameFile := filepath.Join(infoDir, "workflow-name.txt")
-	err := os.WriteFile(workflowNameFile, []byte(workflowName), os.ModePerm)
-	if err != nil {
-		fmt.Printf("Error writing workflow name to file: %v\n", err)
-	}
-}
-
-func UpdateStatus(status string) {
-	statusFile := filepath.Join(infoDir, "status.txt")
-	err := os.WriteFile(statusFile, []byte(status), os.ModePerm)
-	if err != nil {
-		fmt.Printf("Error writing status to file: %v\n", err)
-	}
-}
-
-func UpdateCommitLog(client *github.Client, commitLogId int64) {
-	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, commitLogId, 0)
-	if err != nil {
-		fmt.Printf("Error downloading artifact: %v\n", err)
-	}
-
-	err = DownloadAndExtract(artifactDownloadUrl.String(), infoDir, ".txt")
-	if err != nil {
-		fmt.Printf("Error downloading and extracting commit log: %v\n", err)
-	}
-
-	fmt.Println("Commit log downloaded successfully")
-
-	tempZipFile := filepath.Join(infoDir, "temp.zip")
-	os.Remove(tempZipFile)
-}
-
 func DownloadDantotsu(client *github.Client, workflowId int64, workflowName string, artifactId int64) {
-	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifactId, 0)
+	artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), info.Owner, info.Repo, artifactId, 0)
 	if err != nil {
 		fmt.Printf("Error downloading artifact: %v\n", err)
 	}
 
-	err = DownloadAndExtract(artifactDownloadUrl.String(), tempDir, ".apk")
+	err = downloader.DownloadAndExtract(artifactDownloadUrl.String(), info.TempDir, ".apk")
 	if err != nil {
 		fmt.Printf("Error downloading and extracting APK: %v\n", err)
 	}
 
-	UpdateWorkflowId(workflowId)
-	UpdateWorkflowName(workflowName)
-	UpdateStatus("success")
-
-	fmt.Println("APKs downloaded successfully")
-
-	tempZipFile := filepath.Join(tempDir, "temp.zip")
-	os.Remove(tempZipFile)
+	info.UpdateWorkflowId(workflowId)
+	info.UpdateWorkflowName(workflowName)
+	info.UpdateStatus("success")
 }
 
 func DownloadFile(url string, filePath string) error {
@@ -227,7 +140,7 @@ func DownloadFile(url string, filePath string) error {
 }
 
 func DownloadApkBackup(client *github.Client, workflowId int64, workflowName string) {
-    jobs, _, err := client.Actions.ListWorkflowJobs(context.Background(), owner, repo, workflowId, &github.ListWorkflowJobsOptions{})
+    jobs, _, err := client.Actions.ListWorkflowJobs(context.Background(), info.Owner, info.Repo, workflowId, &github.ListWorkflowJobsOptions{})
     if err != nil {
         fmt.Printf("Error getting workflow jobs: %v\n", err)
     }
@@ -236,7 +149,7 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
         if job.GetName() == "build" {
             fmt.Printf("Found build job with ID: %d\n", job.GetID())
 
-            logs, _, err := client.Actions.GetWorkflowJobLogs(context.Background(), owner, repo, job.GetID(), 0)
+            logs, _, err := client.Actions.GetWorkflowJobLogs(context.Background(), info.Owner, info.Repo, job.GetID(), 0)
             if err != nil {
                 fmt.Printf("Error getting job logs: %v\n", err)
             }
@@ -260,7 +173,7 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
 					continue
 				}
 
-				err = DownloadFile(download["link"], filepath.Join(tempDir, download["name"]))
+				err = DownloadFile(download["link"], filepath.Join(info.TempDir, download["name"]))
 				if err != nil {
 					fmt.Printf("Error downloading APK: %v\n", err)
 				}
@@ -271,73 +184,16 @@ func DownloadApkBackup(client *github.Client, workflowId int64, workflowName str
 
 			if len(downloadTable) == 0 || successfullyDownloaded != len(downloadTable) {
 				println("Failed to download APKs")
-				UpdateStatus("failed")
+				info.UpdateStatus("failed")
 				return
 			}
 
-			UpdateWorkflowName(workflowName)
-			UpdateStatus("success")
+			info.UpdateWorkflowName(workflowName)
+			info.UpdateStatus("success")
 			fmt.Println("APKs downloaded successfully")
 
-			tempZipFile := filepath.Join(tempDir, "temp.zip")
+			tempZipFile := filepath.Join(info.TempDir, "temp.zip")
 			os.Remove(tempZipFile)
         }
     }
-}
-
-func DownloadAndExtract(downloadUrl, outputDir string, ext string) error {
-	resp, err := http.Get(downloadUrl)
-	if err != nil {
-		return fmt.Errorf("error downloading: %v", err)
-	}
-	defer resp.Body.Close()
-
-	err = os.MkdirAll(outputDir, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("error creating output directory: %v", err)
-	}
-
-	tempZipFile := filepath.Join(outputDir, "temp.zip")
-	out, err := os.Create(tempZipFile)
-	if err != nil {
-		return fmt.Errorf("error creating temporary zip file: %v", err)
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return fmt.Errorf("error writing to temporary zip file: %v", err)
-	}
-
-	r, err := zip.OpenReader(tempZipFile)
-	if err != nil {
-		return fmt.Errorf("error opening temporary zip file: %v", err)
-	}
-	defer r.Close()
-
-	for _, f := range r.File {
-		if strings.HasSuffix(f.Name, ext) {
-			rc, err := f.Open()
-			if err != nil {
-				return fmt.Errorf("error opening file in zip: %v", err)
-			}
-			defer rc.Close()
-
-			extracted := filepath.Join(outputDir, f.Name)
-			extractedFile, err := os.Create(extracted)
-			if err != nil {
-				return fmt.Errorf("error creating extracted file: %v", err)
-			}
-			defer extractedFile.Close()
-
-			_, err = io.Copy(extractedFile, rc)
-			if err != nil {
-				return fmt.Errorf("error writing to extracted file: %v", err)
-			}
-
-			fmt.Printf("Extracted: %s\n", f.Name)
-		}
-	}
-
-	return nil
 }

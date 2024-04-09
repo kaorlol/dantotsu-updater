@@ -23,7 +23,7 @@ jobs:
 
                 status=$(cat info/status.txt)
                 workflow_name=$(cat info/workflow-name.txt)
-                commit_log=$(cat info/commit_log.txt)
+                commit_log=$(cat info/commit-log.txt)
 
                 echo "status=$status" >> $GITHUB_ENV
                 echo "workflow_name=$workflow_name" >> $GITHUB_ENV
@@ -40,13 +40,27 @@ jobs:
               run: |
                   git config --global user.email "${{ secrets.EMAIL }}"
                   git config --global user.name "${{ github.repository_owner }}"
-                  git add . ':!temp'
+                  git add .
                   git commit -m "Updated dantotsu to latest version"
 
             - name: Push Changes
               uses: ad-m/github-push-action@master
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Delete Old Releases
+              run: |
+                releases=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                  -H "Accept: application/vnd.github.v3+json" \
+                  https://api.github.com/repos/${{ github.repository }}/releases | jq -r '.[] | .id' | sort -nr)
+
+                for release in $releases; do
+                  if [ $release -gt 5 ]; then
+                    curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                      -H "Accept: application/vnd.github.v3+json" \
+                      https://api.github.com/repos/${{ github.repository }}/releases/$release
+                  fi
+                done
 
             - name: Publish Release
               uses: softprops/action-gh-release@v2
