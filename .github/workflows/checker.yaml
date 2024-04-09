@@ -22,7 +22,6 @@ jobs:
                 go run ./src/main.go 
                 echo "status=$(cat info/status.txt)" >> $GITHUB_ENV
                 echo "workflow_name=$(cat info/workflow-name.txt)" >> $GITHUB_ENV
-                echo "::set-output commit_log=$(cat info/commit-log.txt)"
 
             - name: Get Apk Info
               id: apk-info
@@ -64,7 +63,7 @@ jobs:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag_name: ${{ steps.apk-info.outputs.version-name }}
                   name: ${{ env.workflow_name }}
-                  body: ${{ steps.run-main.outputs.commit_log }}
+                  body_path: ${{ github.workspace }}/info/commit-log.txt
               if: ${{ env.status == 'success' }}
 
     rerun-workflow:
