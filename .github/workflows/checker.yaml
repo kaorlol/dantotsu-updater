@@ -1,5 +1,7 @@
 name: update-checker
 
+# TODO: Split this into separate workflows so there is less clutter
+
 on:
     workflow_dispatch:
 
@@ -33,9 +35,35 @@ jobs:
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
 
+            - name: Get Apk Info
+              id: apk-info
+              uses: hkusu/apk-info-action@v1
+              with:
+                  apk-path: "./temp/app-google-universal-alpha.apk"
+              
+            - name: Save Apk Version to Env-File
+              run: |
+                  echo "apk_version=${{ steps.apk-info.outputs.version-name }}" > version.txt
+
             - name: Run Release
-              run: gh workflow run release.yaml
+              run: gh workflow run release.yaml --env-file version.txt
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   GH_REPO: ${{ github.repository }}
               if: ${{ env.status == 'success' }}
+
+    rerun-workflow:
+        name: Re-run workflow
+        needs: check_for_update
+        if: success() || failure()
+        runs-on: ubuntu-latest
+        steps:
+            - name: Sleep until 5 minutes have passed
+              run: |
+                  sleep 300
+
+            - name: Re-trigger workflow
+              run: gh workflow run checker.yaml
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GH_REPO: ${{ github.repository }}

@@ -1,14 +1,11 @@
 name: releaser
 
 on:
-  workflow_run:
-    workflows: ["checker"]
-    types:
-      - completed
   workflow_dispatch:
 
 env:
   workflow_name: none
+  apk-version: none
 
 jobs:
   release:
@@ -44,16 +41,15 @@ jobs:
               https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$tag
           done
 
-      - name: Get Apk Info
-        id: apk-info
-        uses: hkusu/apk-info-action@v1
-        with:
-            apk-path: "./temp/app-google-universal-alpha.apk"
+      - name: Get Apk Version
+        run: |
+          version=$(cat version.txt)
+          echo "apk-version=$version" >> $GITHUB_ENV
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
             files: ./temp/*.apk
-            tag_name: ${{ steps.apk-info.outputs.version-name }}
+            tag_name: ${{ env.apk-version }}
             name: ${{ env.workflow_name }}
             body_path: ./info/commit-log.txt
