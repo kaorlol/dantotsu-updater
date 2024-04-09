@@ -1,0 +1,58 @@
+name: releaser
+
+on:
+  workflow_run:
+    workflows: ["checker"]
+    types:
+      - completed
+
+env:
+  workflow_name: none
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set Workflow Name
+        run: echo "workflow_name=$(cat info/workflow-name.txt)" >> $GITHUB_ENV
+
+      - name: Delete Old Releases
+        run: |
+          releases=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/releases | jq -r '.[] | .id' | sort -nr)
+
+          for release in $releases; do
+            curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/repos/${{ github.repository }}/releases/$release
+          done
+
+      - name: Delete Old Tags
+        run: |
+          tags=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/tags | jq -r '.[] | .name')
+
+          for tag in $tags; do
+            curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$tag
+          done
+
+      - name: Get Apk Info
+        id: apk-info
+        uses: hkusu/apk-info-action@v1
+        with:
+            apk-path: "./temp/app-google-universal-alpha.apk"
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+            files: ./temp/*.apk
+            tag_name: ${{ steps.apk-info.outputs.version-name }}
+            name: ${{ env.workflow_name }}
+            body_path: ./info/commit-log.txt
