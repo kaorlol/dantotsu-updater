@@ -5,6 +5,7 @@ on:
     workflows: ["checker"]
     types:
       - completed
+  workflow_dispatch:
 
 env:
   workflow_name: none
