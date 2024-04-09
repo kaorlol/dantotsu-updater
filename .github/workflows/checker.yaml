@@ -1,7 +1,5 @@
 name: update-checker
 
-# TODO: Split this into separate workflows so there is less clutter
-
 on:
     workflow_dispatch:
 
@@ -9,6 +7,7 @@ env:
     TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
     dantotsu_runs: "https://api.github.com/repos/rebelonion/Dantotsu/actions/workflows/beta.yml/runs?branch=dev"
     status: failure
+    workflow_name: none
 
 jobs:
     check_for_update:
@@ -22,14 +21,14 @@ jobs:
               run: |
                 go run ./src/main.go 
                 echo "status=$(cat info/status.txt)" >> $GITHUB_ENV
-            
-            - name: Archive Artifacts
-              uses: actions/upload-artifact@v4
+                echo "workflow_name=$(cat info/workflow-name.txt)" >> $GITHUB_ENV
+
+            - name: Get Apk Info
+              id: apk-info
+              uses: hkusu/apk-info-action@v1
               with:
-                  name: artifacts
-                  path: |
-                      ./info
-                      ./temp
+                  apk-path: "./temp/app-google-universal-alpha.apk"
+              if: ${{ env.status == 'success' }}
 
             - name: Commit Changes
               run: |
@@ -43,11 +42,37 @@ jobs:
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Run Release
-              run: gh workflow run release.yaml
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  GH_REPO: ${{ github.repository }}
+            - name: Delete Old Releases
+              run: |
+                releases=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                  -H "Accept: application/vnd.github.v3+json" \
+                  https://api.github.com/repos/${{ github.repository }}/releases | jq -r '.[] | .id' | sort -nr)
+
+                for release in $releases; do
+                  curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                    -H "Accept: application/vnd.github.v3+json" \
+                    https://api.github.com/repos/${{ github.repository }}/releases/$release
+                done
+
+            - name: Delete Old Tags
+              run: |
+                tags=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                  -H "Accept: application/vnd.github.v3+json" \
+                  https://api.github.com/repos/${{ github.repository }}/tags | jq -r '.[] | .name')
+
+                for tag in $tags; do
+                  curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                    -H "Accept: application/vnd.github.v3+json" \
+                    https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$tag
+                done
+
+            - name: Publish Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: ./temp/*.apk
+                  tag_name: ${{ steps.apk-info.outputs.version-name }}
+                  name: ${{ env.workflow_name }}
+                  body_path: ./info/commit-log.txt
               if: ${{ env.status == 'success' }}
 
     rerun-workflow:
