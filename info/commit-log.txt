@@ -1,3 +1,1 @@
-● fix: idr ~aayush262
-● feat: split all settings ~aayush262
-● feat: toggle for icon in rpc ~aayush262
+● fix: settings scrolling ~aayush262

@@ -1,1 +1,1 @@
-fix: idr
+fix: settings scrolling
