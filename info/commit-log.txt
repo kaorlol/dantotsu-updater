@@ -1,2 +1,3 @@
-● fix: no more 13 arifs ~aayush262
-● fix: no 13 arifs ~aayush262
+● fix: idr ~aayush262
+● feat: split all settings ~aayush262
+● feat: toggle for icon in rpc ~aayush262
