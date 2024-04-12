@@ -1,1 +1,1 @@
-● Feet(Settings): UI changes (#351) ~Sadwhy
+● fix: Disclaimer dialog crash ~aayush262
