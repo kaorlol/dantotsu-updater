@@ -1,1 +1,1 @@
-● fix: settings scrolling ~aayush262
+● Feet(Settings): UI changes (#351) ~Sadwhy
