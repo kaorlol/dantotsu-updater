@@ -1,1 +1,1 @@
-fix: Disclaimer dialog crash
+Feet(Settings): Revamped UI (#352)
