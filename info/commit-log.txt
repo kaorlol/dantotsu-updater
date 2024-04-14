@@ -1,1 +1,1 @@
-● Feet(Settings): Revamped UI (#352) ~Sadwhy
+● fix(settings): Centre icons ~Sadwhy

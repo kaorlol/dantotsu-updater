@@ -1,1 +1,1 @@
-Feet(Settings): Revamped UI (#352)
+fix(settings): Centre icons
