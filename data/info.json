@@ -1,1 +1,1 @@
-{"commit-log":"fix: alpha update message ~rebelonionchore: update extension api ~rebelonionfix: activity opening twice ~rebelonionfeat: nomedia file ~rebelonionfix: offline mode failing ~rebelonion","status":"success","elapsed-time":2913,"workflow":{"id":8683421490,"title":"Build APK and Notify Discord"}}
+{"commit-log":"feat: embedded tracks\n\nmodified #338 ~rebelonion","status":"success","elapsed-time":5031,"workflow":{"id":8684181334,"title":"Build APK and Notify Discord"}}
