@@ -130,7 +130,7 @@ func getCommitHistory(since, until time.Time) error {
 		author := commit.GetCommit().GetAuthor().GetName()
 
 		if !strings.Contains(author, "(bot)") {
-			commitLog += fmt.Sprintf("%s ~%s", strings.Trim(message, " \t\n\r"), author)
+			commitLog += fmt.Sprintf("%s ~%s\n", strings.Trim(message, " \t\n\r"), author)
 		}
 	}
 
