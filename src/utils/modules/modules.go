@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"sync"
 )
 
 func ReadFile(path string) (string, error) {
@@ -30,65 +32,6 @@ func WriteFile(path string, data string) error {
 	return nil
 }
 
-func DownloadFile(urlStr string, outputDir string) error {
-    resp, err := http.Get(urlStr)
-    if err != nil {
-        return err
-    }
-    defer resp.Body.Close()
-    
-    if resp.StatusCode != http.StatusOK {
-        return fmt.Errorf("unable to download file: %s", resp.Status)
-    }
-    
-	contentDisposition := resp.Header.Get("Content-Disposition")
-	fileName := strings.Trim(contentDisposition[len("attachment; filename="):], "\"")
-    outFile, err := os.Create(filepath.Join(outputDir, fileName))
-    if err != nil {
-        return err
-    }
-    defer outFile.Close()
-    
-    _, err = io.Copy(outFile, resp.Body)
-    if err != nil {
-        return err
-    }
-    
-    return nil
-}
-
-func ExtractFromZip(zipFile string, ext string, outputDir string) error {
-	reader, err := zip.OpenReader(zipFile)
-	if err != nil {
-		return fmt.Errorf("unable to open zip file: %v", err)
-	}
-	defer reader.Close()
-
-	for _, file := range reader.File {
-		if strings.HasSuffix(file.Name, ext) {
-			src, err := file.Open()
-			if err != nil {
-				return err
-			}
-			defer src.Close()
-
-			dstPath := filepath.Join(outputDir, file.Name)
-			dst, err := os.Create(dstPath)
-			if err != nil {
-				return err
-			}
-			defer dst.Close()
-
-			_, err = io.Copy(dst, src)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 func MakeDir(dir string) error {
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
@@ -105,4 +48,97 @@ func RemoveDir(dir string) error {
 	}
 
 	return nil
+}
+
+func DownloadFile(urlStr string, outputDir string) {
+    Parallel([]string{urlStr}, func(url string) {
+        resp, err := http.Get(url)
+        if err != nil {
+            fmt.Printf("Error downloading file %s: %s\n", url, err)
+            return
+        }
+        defer resp.Body.Close()
+
+        if resp.StatusCode != http.StatusOK {
+            fmt.Printf("Unable to download file %s: %s\n", url, resp.Status)
+            return
+        }
+
+        contentDisposition := resp.Header.Get("Content-Disposition")
+		regexp := regexp.MustCompile(`filename=\s*(?:"([^"]+)"|([^;]+))`)
+		fileName := Filter(regexp.FindStringSubmatch(contentDisposition)[1:], func(group string) bool { return group != "" })[0]
+        outFile, err := os.Create(filepath.Join(outputDir, fileName))
+        if err != nil {
+            fmt.Printf("Error creating file %s: %s\n", fileName, err)
+            return
+        }
+        defer outFile.Close()
+
+        _, err = io.Copy(outFile, resp.Body)
+        if err != nil {
+            fmt.Printf("Error copying content to file %s: %s\n", fileName, err)
+            return
+        }
+    })
+}
+
+func ExtractFromZip(zipFile string, ext string, outputDir string) error {
+    reader, err := zip.OpenReader(zipFile)
+    if err != nil {
+        return fmt.Errorf("unable to open zip file: %v", err)
+    }
+    defer reader.Close()
+
+    var filesToExtract []string
+    for _, file := range reader.File {
+        if strings.HasSuffix(file.Name, ext) {
+            filesToExtract = append(filesToExtract, file.Name)
+        }
+    }
+
+    Parallel(filesToExtract, func(fileName string) {
+        file, err := reader.Open(fileName)
+        if err != nil {
+            fmt.Printf("Error opening file %s from zip: %s\n", fileName, err)
+            return
+        }
+        defer file.Close()
+
+        outFile, err := os.Create(filepath.Join(outputDir, fileName))
+        if err != nil {
+            fmt.Printf("Error creating file %s: %s\n", fileName, err)
+            return
+        }
+        defer outFile.Close()
+
+        _, err = io.Copy(outFile, file)
+        if err != nil {
+            fmt.Printf("Error copying content to file %s: %s\n", fileName, err)
+            return
+        }
+    })
+
+	return nil
+}
+
+func Parallel[TYPE any](data []TYPE, f func(TYPE)) {
+	var wg sync.WaitGroup
+	for _, d := range data {
+		wg.Add(1)
+		go func(d TYPE) {
+			defer wg.Done()
+			f(d)
+		}(d)
+	}
+	wg.Wait()
+}
+
+func Filter[TYPE any](data []TYPE, f func(TYPE) bool) []TYPE {
+	var result []TYPE
+	for _, d := range data {
+		if f(d) {
+			result = append(result, d)
+		}
+	}
+	return result
 }

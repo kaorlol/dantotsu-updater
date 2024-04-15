@@ -80,22 +80,23 @@ func DownloadArtifacts(runID int64) error {
 	}
 
 	modules.MakeDir("archive")
-	for _, artifact := range artifacts.Artifacts {
+	modules.Parallel(artifacts.Artifacts, func(artifact *github.Artifact) {
 		if artifact.GetExpired() {
 			println("Artifact expired")
-			continue
+			return
 		}
 
 		fmt.Printf("Downloading artifact: %s...\n", artifact.GetName())
 		artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifact.GetID(), 0)
 		if _, ok := err.(*github.RateLimitError); ok {
 			info.UpdateInfo(info.Info{ Status: "hit rate limit" })
-			return fmt.Errorf("hit rate limit")
+			println("hit rate limit")
+			return
 		}
 
 		modules.DownloadFile(artifactDownloadUrl.String(), "archive")
 		modules.ExtractFromZip("archive/"+artifact.GetName()+".zip", ".apk", "archive")
-	}
+	})
 
 	files, _ := os.ReadDir("archive")
 	for _, file := range files {
