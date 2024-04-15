@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -24,7 +25,7 @@ func ReadFile(path string) (string, error) {
 
 func WriteFile(path string, data string) error {
 	file := filepath.Join(path)
-	err := os.WriteFile(file, []byte(data), 0644)
+	err := os.WriteFile(file, []byte(data), 0o644)
 	if err != nil {
 		return fmt.Errorf("error writing file: %v", err)
 	}
@@ -33,7 +34,7 @@ func WriteFile(path string, data string) error {
 }
 
 func MakeDir(dir string) error {
-	err := os.MkdirAll(dir, 0755)
+	err := os.MkdirAll(dir, 0o755)
 	if err != nil {
 		return fmt.Errorf("error creating directory: %v", err)
 	}
@@ -50,87 +51,112 @@ func RemoveDir(dir string) error {
 	return nil
 }
 
-func DownloadFile(urlStr string, outputDir string) {
-    Parallel([]string{urlStr}, func(url string) {
-        resp, err := http.Get(url)
-        if err != nil {
-            fmt.Printf("Error downloading file %s: %s\n", url, err)
-            return
-        }
-        defer resp.Body.Close()
+func DownloadFile(urlStr string, outputDir string) error {
+	return Parallel([]string{urlStr}, func(url string) error {
+		resp, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("error downloading file: %v", err)
+		}
+		defer resp.Body.Close()
 
-        if resp.StatusCode != http.StatusOK {
-            fmt.Printf("Unable to download file %s: %s\n", url, resp.Status)
-            return
-        }
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("unable to download file %s: %s", url, resp.Status)
+		}
 
-        contentDisposition := resp.Header.Get("Content-Disposition")
+		contentDisposition := resp.Header.Get("Content-Disposition")
 		regexp := regexp.MustCompile(`filename=\s*(?:"([^"]+)"|([^;]+))`)
 		fileName := Filter(regexp.FindStringSubmatch(contentDisposition)[1:], func(group string) bool { return group != "" })[0]
-        outFile, err := os.Create(filepath.Join(outputDir, fileName))
-        if err != nil {
-            fmt.Printf("Error creating file %s: %s\n", fileName, err)
-            return
-        }
-        defer outFile.Close()
+		outFile, err := os.Create(filepath.Join(outputDir, fileName))
+		if err != nil {
+			return fmt.Errorf("error creating file: %v", err)
+		}
+		defer outFile.Close()
 
-        _, err = io.Copy(outFile, resp.Body)
-        if err != nil {
-            fmt.Printf("Error copying content to file %s: %s\n", fileName, err)
-            return
-        }
-    })
+		_, err = io.Copy(outFile, resp.Body)
+		if err != nil {
+			return fmt.Errorf("error copying content to file %s: %v", fileName, err)
+		}
+
+		fmt.Printf("Downloaded file %s\n", fileName)
+		return nil
+	})
 }
 
 func ExtractFromZip(zipFile string, ext string, outputDir string) error {
-    reader, err := zip.OpenReader(zipFile)
-    if err != nil {
-        return fmt.Errorf("unable to open zip file: %v", err)
-    }
-    defer reader.Close()
+	reader, err := zip.OpenReader(zipFile)
+	if err != nil {
+		return fmt.Errorf("unable to open zip file: %v", err)
+	}
+	defer reader.Close()
 
-    var filesToExtract []string
-    for _, file := range reader.File {
-        if strings.HasSuffix(file.Name, ext) {
-            filesToExtract = append(filesToExtract, file.Name)
-        }
-    }
+	var filesToExtract []string
+	for _, file := range reader.File {
+		if strings.HasSuffix(file.Name, ext) {
+			filesToExtract = append(filesToExtract, file.Name)
+		}
+	}
 
-    Parallel(filesToExtract, func(fileName string) {
-        file, err := reader.Open(fileName)
-        if err != nil {
-            fmt.Printf("Error opening file %s from zip: %s\n", fileName, err)
-            return
-        }
-        defer file.Close()
+	err = Parallel(filesToExtract, func(fileName string) error {
+		file, err := reader.Open(fileName)
+		if err != nil {
+			return fmt.Errorf("error opening file %s from zip: %v", fileName, err)
+		}
+		defer file.Close()
 
-        outFile, err := os.Create(filepath.Join(outputDir, fileName))
-        if err != nil {
-            fmt.Printf("Error creating file %s: %s\n", fileName, err)
-            return
-        }
-        defer outFile.Close()
+		outFile, err := os.Create(filepath.Join(outputDir, fileName))
+		if err != nil {
+			return fmt.Errorf("error creating file %s: %v", fileName, err)
+		}
+		defer outFile.Close()
 
-        _, err = io.Copy(outFile, file)
-        if err != nil {
-            fmt.Printf("Error copying content to file %s: %s\n", fileName, err)
-            return
-        }
-    })
+		_, err = io.Copy(outFile, file)
+		if err != nil {
+			return fmt.Errorf("error copying content to file %s: %v", fileName, err)
+		}
 
-	return nil
+		fmt.Printf("Extracted file %s\n", fileName)
+		return nil
+	})
+
+	return err
 }
 
-func Parallel[TYPE any](data []TYPE, f func(TYPE)) {
+func Parallel[TYPE any](data []TYPE, f interface{}) error {
 	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var firstErr error
+
+	funcType := reflect.TypeOf(f)
+	numOut := funcType.NumOut()
+	errCh := make(chan error, len(data))
+
 	for _, d := range data {
 		wg.Add(1)
 		go func(d TYPE) {
 			defer wg.Done()
-			f(d)
+			out := reflect.ValueOf(f).Call([]reflect.Value{reflect.ValueOf(d)})
+			if numOut == 1 && funcType.Out(0).Kind() == reflect.Interface && funcType.Out(0).String() == "error" {
+				if err, ok := out[0].Interface().(error); ok && err != nil {
+					errCh <- err
+				}
+			}
 		}(d)
 	}
-	wg.Wait()
+
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	for err := range errCh {
+		mu.Lock()
+		if firstErr == nil {
+			firstErr = err
+		}
+		mu.Unlock()
+	}
+
+	return firstErr
 }
 
 func Filter[TYPE any](data []TYPE, f func(TYPE) bool) []TYPE {

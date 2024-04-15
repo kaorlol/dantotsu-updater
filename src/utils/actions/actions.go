@@ -16,10 +16,10 @@ import (
 )
 
 var (
-	token = info.GetGitHubToken()
-	workflowInfo = info.GetInfo()
+	token            = info.GetGitHubToken()
+	workflowInfo     = info.GetInfo()
 	workflowSettings = settings.GetSettings()
-	client = createClient()
+	client           = createClient()
 )
 
 func createClient() *github.Client {
@@ -41,12 +41,12 @@ func GetWorkflowLatestRun() (int64, error) {
 	})
 
 	if _, ok := err.(*github.RateLimitError); ok {
-		info.UpdateInfo(info.Info{ Status: "hit rate limit" })
+		info.UpdateInfo(info.Info{Status: "hit rate limit"})
 		return 0, fmt.Errorf("hit rate limit")
 	}
 
 	if len(workflowRuns.WorkflowRuns) == 0 {
-		info.UpdateInfo(info.Info{ Status: "no workflow runs found" })
+		info.UpdateInfo(info.Info{Status: "no workflow runs found"})
 		return 0, fmt.Errorf("no workflow runs found")
 	}
 
@@ -60,8 +60,8 @@ func GetWorkflowLatestRun() (int64, error) {
 	fmt.Printf("Workflow run named: '%s' found with id %d\n", latestRun.GetName(), latestRun.GetID())
 	workflowInfo = info.UpdateInfo(info.Info{
 		Workflow: info.Workflow{
-			ID: latestRun.GetID(),
-			Title: latestRun.GetName(),
+			ID:    latestRun.GetID(),
+			Title: latestRun.GetDisplayTitle(),
 		},
 	})
 
@@ -75,35 +75,45 @@ func DownloadArtifacts(runID int64) error {
 
 	artifacts, _, err := client.Actions.ListWorkflowRunArtifacts(context.Background(), owner, repo, runID, &github.ListOptions{})
 	if _, ok := err.(*github.RateLimitError); ok {
-		info.UpdateInfo(info.Info{ Status: "hit rate limit" })
+		info.UpdateInfo(info.Info{Status: "hit rate limit"})
 		return fmt.Errorf("hit rate limit")
 	}
 
 	modules.MakeDir("archive")
-	modules.Parallel(artifacts.Artifacts, func(artifact *github.Artifact) {
+	err = modules.Parallel(artifacts.Artifacts, func(artifact *github.Artifact) error {
 		if artifact.GetExpired() {
-			println("Artifact expired")
-			return
+			return fmt.Errorf("artifact expired")
 		}
 
-		fmt.Printf("Downloading artifact: %s...\n", artifact.GetName())
 		artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifact.GetID(), 0)
 		if _, ok := err.(*github.RateLimitError); ok {
-			info.UpdateInfo(info.Info{ Status: "hit rate limit" })
-			println("hit rate limit")
-			return
+			info.UpdateInfo(info.Info{Status: "hit rate limit"})
+			return fmt.Errorf("hit rate limit")
 		}
 
-		modules.DownloadFile(artifactDownloadUrl.String(), "archive")
-		modules.ExtractFromZip("archive/"+artifact.GetName()+".zip", ".apk", "archive")
+		err = modules.DownloadFile(artifactDownloadUrl.String(), "archive")
+		if err != nil {
+			return err
+		}
+
+		err = modules.ExtractFromZip("archive/"+artifact.GetName()+".zip", ".apk", "archive")
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	files, _ := os.ReadDir("archive")
-	for _, file := range files {
+	modules.Parallel(files, func(file os.DirEntry) {
 		if file.IsDir() || file.Name()[len(file.Name())-4:] != ".apk" {
-			os.Remove("archive/"+file.Name())
+			os.Remove("archive/" + file.Name())
 		}
-	}
+	})
+
 	println("Artifacts downloaded successfully")
 	return nil
 }
@@ -114,13 +124,13 @@ func getCommitHistory(since, until time.Time) error {
 
 	println("Getting commit history...")
 	commits, _, err := client.Repositories.ListCommits(context.Background(), owner, repo, &github.CommitsListOptions{
-		SHA: workflowSettings.Workflow.Branch,
+		SHA:   workflowSettings.Workflow.Branch,
 		Since: since,
 		Until: until,
 	})
 
 	if _, ok := err.(*github.RateLimitError); ok {
-		info.UpdateInfo(info.Info{ Status: "hit rate limit" })
+		info.UpdateInfo(info.Info{Status: "hit rate limit"})
 		return fmt.Errorf("hit rate limit")
 	}
 
@@ -130,11 +140,11 @@ func getCommitHistory(since, until time.Time) error {
 		author := commit.GetCommit().GetAuthor().GetName()
 
 		if !strings.Contains(author, "(bot)") {
-			commitLog += fmt.Sprintf("%s ~%s\n", strings.Trim(message, " \t\n\r"), author)
+			commitLog += fmt.Sprintf("- %s ~%s\n", strings.Trim(message, " \t\n\r"), author)
 		}
 	}
 
-	workflowInfo = info.UpdateInfo(info.Info{ CommitLog: commitLog })
+	workflowInfo = info.UpdateInfo(info.Info{CommitLog: commitLog})
 	println("Commit history updated successfully")
 	return nil
 }

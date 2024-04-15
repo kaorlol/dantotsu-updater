@@ -1,10 +1,11 @@
 package main
 
 import (
-	"artifact-downloader/src/utils/actions"
-	"artifact-downloader/src/utils/info"
 	"fmt"
 	"time"
+
+	"artifact-downloader/src/utils/actions"
+	"artifact-downloader/src/utils/info"
 )
 
 func main() {
@@ -16,6 +17,11 @@ func main() {
 		return
 	}
 
-	actions.DownloadArtifacts(latestRun)
-	info.UpdateInfo(info.Info{ ElapsedTime: int64(time.Since(prevTime).Seconds()) })
+	err = actions.DownloadArtifacts(latestRun)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	info.UpdateInfo(info.Info{ElapsedTime: int64(time.Since(prevTime).Seconds())})
 }
