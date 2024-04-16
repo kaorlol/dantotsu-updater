@@ -1,1 +1,1 @@
-{"commit-log":"- feat: hide a12 theme settings for unsupported devices ~aayush262\n- feat: settings to recycler view ~aayush262\n- fix: custom theme dialog not working ~aayush262\n- feat: sort forks by stars ~aayush262\n","status":"success","elapsed-time":8,"workflow":{"id":8693900626,"title":"feat: hide a12 theme settings for unsupported devices"}}
+{"commit-log":"- fix(settings): Center icons (again) 😔 (#361) ~Sadwhy\n","status":"success","elapsed-time":1847,"workflow":{"id":8700434109,"title":"fix(settings): Center icons (again) 😔 (#361)"}}
