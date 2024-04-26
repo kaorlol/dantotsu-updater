@@ -1,4 +1,4 @@
-package settings
+package data
 
 import (
 	"encoding/json"
@@ -6,9 +6,7 @@ import (
 	"path/filepath"
 )
 
-const path = "data/settings.json"
-
-type Workflow struct {
+type SWorkflow struct {
 	Owner  string `json:"owner"`
 	Repo   string `json:"repo"`
 	Name   string `json:"name"`
@@ -16,12 +14,12 @@ type Workflow struct {
 }
 
 type Settings struct {
-	Workflow Workflow `json:"workflow"`
-	Delay    int64    `json:"delay"`
+	Workflow SWorkflow `json:"workflow"`
+	Delay    int64     `json:"delay"`
 }
 
 func GetSettings() Settings {
-	file := filepath.Join(path)
+	file := filepath.Join("data/settings.json")
 	data, _ := os.ReadFile(file)
 
 	var settings Settings

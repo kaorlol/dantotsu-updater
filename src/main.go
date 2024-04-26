@@ -1,27 +1,41 @@
 package main
 
 import (
-	"fmt"
+	"os"
+	"strings"
 	"time"
 
-	"artifact-downloader/src/utils/actions"
-	"artifact-downloader/src/utils/info"
+	"artifact-downloader/src/data"
+	"artifact-downloader/src/modules"
 )
 
 func main() {
+	token := getTokenArgs()
+	if token == "" {
+		println("token not provided")
+		return
+	}
+
 	println("Getting workflow latest run...")
 	prevTime := time.Now()
-	latestRun, err := actions.GetWorkflowLatestRun()
+	modules.SetClient(token)
+	latestRun, err := modules.GetWorkflowLatestRun()
 	if err != nil {
-		fmt.Println(err)
+		println(err)
 		return
 	}
 
-	err = actions.DownloadArtifacts(latestRun)
+	err = modules.DownloadArtifacts(latestRun)
 	if err != nil {
-		fmt.Println(err)
+		println(err)
 		return
 	}
 
-	info.UpdateInfo(info.Info{ElapsedTime: int64(time.Since(prevTime).Seconds())})
+	data.UpdateInfo(data.Info{ElapsedTime: time.Since(prevTime).Seconds(), Status: "success"})
+}
+
+func getTokenArgs() string {
+	return strings.TrimPrefix(modules.Filter(os.Args[1:], func(arg string) bool {
+		return strings.HasPrefix(arg, "--token=")
+	})[0], "--token=")
 }

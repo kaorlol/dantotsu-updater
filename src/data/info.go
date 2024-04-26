@@ -1,4 +1,4 @@
-package info
+package data
 
 import (
 	"encoding/json"
@@ -7,22 +7,20 @@ import (
 	"reflect"
 )
 
-const path = "data/info.json"
-
-type Workflow struct {
+type IWorkflow struct {
 	ID    int64  `json:"id"`
 	Title string `json:"title"`
 }
 
 type Info struct {
-	CommitLog   string   `json:"commit-log"`
-	Status      string   `json:"status"`
-	ElapsedTime int64    `json:"elapsed-time"`
-	Workflow    Workflow `json:"workflow"`
+	CommitLog   string    `json:"commit-log"`
+	Status      string    `json:"status"`
+	ElapsedTime float64   `json:"elapsed-time"`
+	Workflow    IWorkflow `json:"workflow"`
 }
 
 func GetInfo() Info {
-	file := filepath.Join(path)
+	file := filepath.Join("data/info.json")
 	data, _ := os.ReadFile(file)
 
 	var info Info
@@ -39,7 +37,7 @@ func UpdateInfo(info Info) Info {
 		}
 	}
 
-	file := filepath.Join(path)
+	file := filepath.Join("data/info.json")
 	data, _ := json.Marshal(info)
 	os.WriteFile(file, data, 0o644)
 	return info

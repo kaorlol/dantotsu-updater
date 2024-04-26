@@ -6,10 +6,10 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"strings"
 	"sync"
 )
 
@@ -82,7 +82,7 @@ func DownloadFile(urlStr string, outputDir string) error {
 	})
 }
 
-func ExtractFromZip(zipFile string, ext string, outputDir string) error {
+func ExtractFromZip(zipFile string, outputDir string) error {
 	reader, err := zip.OpenReader(zipFile)
 	if err != nil {
 		return fmt.Errorf("unable to open zip file: %v", err)
@@ -91,7 +91,7 @@ func ExtractFromZip(zipFile string, ext string, outputDir string) error {
 
 	var filesToExtract []string
 	for _, file := range reader.File {
-		if strings.HasSuffix(file.Name, ext) {
+		if path.Ext(file.Name) == ".apk" {
 			filesToExtract = append(filesToExtract, file.Name)
 		}
 	}

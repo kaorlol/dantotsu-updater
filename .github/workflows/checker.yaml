@@ -4,7 +4,6 @@ on:
     workflow_dispatch:
 
 env:
-    TOKEN_PAT: ${{ secrets.TOKEN_PAT }}
     status: failure
     workflow_name: none
     apk-path: none
@@ -20,7 +19,7 @@ jobs:
             - name: Run Main.go
               id: run-main
               run: |
-                  go run ./src/main.go 
+                  go run ./src/main.go --token="${{ secrets.GITHUB_TOKEN }}"
 
             - name: Set Environment Variables
               run: |
@@ -28,7 +27,7 @@ jobs:
                   echo "workflow_name=$(jq -r '.workflow.title' data/info.json)" >> $GITHUB_ENV
                   echo "repo-title=$(jq -r '.workflow.repo' data/settings.json)" >> $GITHUB_ENV
                   echo "apk-path=$(ls -S archive/*.apk | head -n 1)" >> $GITHUB_ENV
-            
+
             - name: Make Temporary Files
               run: |
                   echo "$(jq -r '.["commit-log"]' data/info.json)" > ./data/commit-log.txt
@@ -36,10 +35,10 @@ jobs:
 
             - name: Get Apk Info
               id: apk-info
+              if: ${{ env.status == 'success' }}
               uses: hkusu/apk-info-action@v1
               with:
                   apk-path: ${{ env.apk-path }}
-              if: ${{ env.status == 'success' }}
 
             - name: Commit Changes
               run: |
@@ -64,6 +63,7 @@ jobs:
                       -H "Accept: application/vnd.github.v3+json" \
                       https://api.github.com/repos/${{ github.repository }}/releases/$release
                   done
+              if: ${{ env.status == 'success' }}
 
             - name: Delete Old Tags
               run: |
@@ -76,15 +76,16 @@ jobs:
                       -H "Accept: application/vnd.github.v3+json" \
                       https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$tag
                   done
+              if: ${{ env.status == 'success' }}
 
             - name: Publish Release
               uses: softprops/action-gh-release@v2
+              if: ${{ env.status == 'success' }}
               with:
                   files: ./archive/*.apk
                   tag_name: ${{ steps.apk-info.outputs.version-name }}
                   name: ${{ env.workflow_name }}
                   body_path: ./data/commit-log.txt
-              if: ${{ env.status == 'success' }}
 
     rerun-workflow:
         name: Re-run workflow
@@ -92,13 +93,16 @@ jobs:
         if: success() || failure()
         runs-on: ubuntu-latest
         steps:
-            - name: Sleep until 5 minutes have passed
+            - name: Checkout Repository
+              uses: actions/checkout@v4
+
+            - name: Wait for 5 minutes
               run: |
-                  sleep 300
-                  # elapsed_time=$(cat ./data/elapsed-time.txt) # time in seconds
-                  # if [ $elapsed_time -lt 300 ]; then
-                  #     sleep $((300 - $elapsed_time))
-                  # fi
+                  elapsed_time=$(jq -r '.["elapsed-time"]' data/info.json)
+
+                  if [ $elapsed_time -lt 300 ]; then
+                    sleep $((300 - elapsed_time))
+                  fi
 
             - name: Re-trigger workflow
               run: gh workflow run checker.yaml

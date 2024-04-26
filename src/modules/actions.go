@@ -1,4 +1,4 @@
-package actions
+package modules
 
 import (
 	"context"
@@ -7,59 +7,61 @@ import (
 	"strings"
 	"time"
 
-	"artifact-downloader/src/utils/info"
-	"artifact-downloader/src/utils/modules"
-	"artifact-downloader/src/utils/settings"
+	"artifact-downloader/src/data"
 
 	"github.com/google/go-github/v61/github"
 	"golang.org/x/oauth2"
 )
 
 var (
-	token            = info.GetGitHubToken()
-	workflowInfo     = info.GetInfo()
-	workflowSettings = settings.GetSettings()
-	client           = createClient()
+	workflowInfo = data.GetInfo()
+
+	settings = data.GetSettings()
+	owner    = settings.Workflow.Owner
+	repo     = settings.Workflow.Repo
+	name     = settings.Workflow.Name
+
+	client *github.Client
 )
 
-func createClient() *github.Client {
+func SetClient(token string) {
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
+		&oauth2.Token{AccessToken: token, TokenType: "Bearer"},
 	)
 	tc := oauth2.NewClient(context.Background(), ts)
-	return github.NewClient(tc)
+	client = github.NewClient(tc)
 }
 
 func GetWorkflowLatestRun() (int64, error) {
-	owner := workflowSettings.Workflow.Owner
-	repo := workflowSettings.Workflow.Repo
-	name := workflowSettings.Workflow.Name
+	if client == nil {
+		return 0, fmt.Errorf("client not set")
+	}
 
 	workflowRuns, _, err := client.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, name, &github.ListWorkflowRunsOptions{
-		Branch: workflowSettings.Workflow.Branch,
+		Branch: settings.Workflow.Branch,
 		Status: "success",
 	})
 
 	if _, ok := err.(*github.RateLimitError); ok {
-		info.UpdateInfo(info.Info{Status: "hit rate limit"})
+		data.UpdateInfo(data.Info{Status: "hit rate limit"})
 		return 0, fmt.Errorf("hit rate limit")
 	}
 
 	if len(workflowRuns.WorkflowRuns) == 0 {
-		info.UpdateInfo(info.Info{Status: "no workflow runs found"})
+		data.UpdateInfo(data.Info{Status: "no workflow runs found"})
 		return 0, fmt.Errorf("no workflow runs found")
 	}
 
 	latestRun := workflowRuns.WorkflowRuns[0]
 	oldRun := workflowRuns.WorkflowRuns[1]
 	if latestRun.GetID() == workflowInfo.Workflow.ID {
-		time.Sleep(time.Duration(workflowSettings.Delay) * time.Second)
+		time.Sleep(time.Duration(settings.Delay) * time.Second)
 		return GetWorkflowLatestRun()
 	}
 
-	fmt.Printf("Workflow run named: '%s' found with id %d\n", latestRun.GetName(), latestRun.GetID())
-	workflowInfo = info.UpdateInfo(info.Info{
-		Workflow: info.Workflow{
+	fmt.Printf("Workflow run named: \"%s\" found with id %d\n", latestRun.GetDisplayTitle(), latestRun.GetID())
+	workflowInfo = data.UpdateInfo(data.Info{
+		Workflow: data.IWorkflow{
 			ID:    latestRun.GetID(),
 			Title: latestRun.GetDisplayTitle(),
 		},
@@ -70,33 +72,31 @@ func GetWorkflowLatestRun() (int64, error) {
 }
 
 func DownloadArtifacts(runID int64) error {
-	owner := workflowSettings.Workflow.Owner
-	repo := workflowSettings.Workflow.Repo
-
 	artifacts, _, err := client.Actions.ListWorkflowRunArtifacts(context.Background(), owner, repo, runID, &github.ListOptions{})
 	if _, ok := err.(*github.RateLimitError); ok {
-		info.UpdateInfo(info.Info{Status: "hit rate limit"})
+		data.UpdateInfo(data.Info{Status: "hit rate limit"})
 		return fmt.Errorf("hit rate limit")
 	}
 
-	modules.MakeDir("archive")
-	err = modules.Parallel(artifacts.Artifacts, func(artifact *github.Artifact) error {
+	MakeDir("archive")
+	err = Parallel(artifacts.Artifacts, func(artifact *github.Artifact) error {
 		if artifact.GetExpired() {
+			data.UpdateInfo(data.Info{Status: "artifacts expired"})
 			return fmt.Errorf("artifact expired")
 		}
 
 		artifactDownloadUrl, _, err := client.Actions.DownloadArtifact(context.Background(), owner, repo, artifact.GetID(), 0)
 		if _, ok := err.(*github.RateLimitError); ok {
-			info.UpdateInfo(info.Info{Status: "hit rate limit"})
+			data.UpdateInfo(data.Info{Status: "hit rate limit"})
 			return fmt.Errorf("hit rate limit")
 		}
 
-		err = modules.DownloadFile(artifactDownloadUrl.String(), "archive")
+		err = DownloadFile(artifactDownloadUrl.String(), "archive")
 		if err != nil {
 			return err
 		}
 
-		err = modules.ExtractFromZip("archive/"+artifact.GetName()+".zip", ".apk", "archive")
+		err = ExtractFromZip("archive/"+artifact.GetName()+".zip", "archive")
 		if err != nil {
 			return err
 		}
@@ -108,7 +108,7 @@ func DownloadArtifacts(runID int64) error {
 	}
 
 	files, _ := os.ReadDir("archive")
-	modules.Parallel(files, func(file os.DirEntry) {
+	Parallel(files, func(file os.DirEntry) {
 		if file.IsDir() || file.Name()[len(file.Name())-4:] != ".apk" {
 			os.Remove("archive/" + file.Name())
 		}
@@ -119,32 +119,32 @@ func DownloadArtifacts(runID int64) error {
 }
 
 func getCommitHistory(since, until time.Time) error {
-	owner := workflowSettings.Workflow.Owner
-	repo := workflowSettings.Workflow.Repo
-
 	println("Getting commit history...")
 	commits, _, err := client.Repositories.ListCommits(context.Background(), owner, repo, &github.CommitsListOptions{
-		SHA:   workflowSettings.Workflow.Branch,
+		SHA:   settings.Workflow.Branch,
 		Since: since,
 		Until: until,
 	})
 
 	if _, ok := err.(*github.RateLimitError); ok {
-		info.UpdateInfo(info.Info{Status: "hit rate limit"})
+		data.UpdateInfo(data.Info{Status: "hit rate limit"})
 		return fmt.Errorf("hit rate limit")
 	}
 
-	commitLog := ""
-	for _, commit := range commits {
-		message := commit.GetCommit().GetMessage()
+	var commitLog strings.Builder
+	for i, commit := range commits {
+		message := strings.TrimFunc(commit.GetCommit().GetMessage(), func(r rune) bool { return r == '\n' || r == '\r' || r == '\t' || r == ' ' })
 		author := commit.GetCommit().GetAuthor().GetName()
 
 		if !strings.Contains(author, "(bot)") {
-			commitLog += fmt.Sprintf("- %s ~%s\n", strings.Trim(message, " \t\n\r"), author)
+			commitLog.WriteString(fmt.Sprintf("- %s ~%s", message, author))
+			if i != len(commits)-1 {
+				commitLog.WriteRune('\n')
+			}
 		}
 	}
 
-	workflowInfo = info.UpdateInfo(info.Info{CommitLog: commitLog})
+	workflowInfo = data.UpdateInfo(data.Info{CommitLog: commitLog.String()})
 	println("Commit history updated successfully")
 	return nil
 }
