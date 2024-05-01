@@ -1,1 +1,1 @@
-{"commit-log":"- Very small UI change (#384)\n\n* Change Text gap\r\n\r\n* Use center instead of top and word limit\r\n\r\n* Max width for desc and center instead of top\r\n\r\n* Changed some strings\r\n\r\n* fix ~Sadwhy","status":"success","elapsed-time":16786.439442606,"workflow":{"id":8912748396,"title":"Very small UI change (#384)"}}
+{"commit-log":"- fix: decouple animator for stories ~rebelonion","status":"success","elapsed-time":447.107591035,"workflow":{"id":8912828076,"title":"fix: decouple animator for stories"}}
