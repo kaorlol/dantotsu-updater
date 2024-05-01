@@ -1,1 +1,1 @@
-{"commit-log":"- fix: hide image search for manga ~rebelonion","status":"success","elapsed-time":783.50705789,"workflow":{"id":8903680136,"title":"fix: hide image search for manga"}}
+{"commit-log":"- Very small UI change (#384)\n\n* Change Text gap\r\n\r\n* Use center instead of top and word limit\r\n\r\n* Max width for desc and center instead of top\r\n\r\n* Changed some strings\r\n\r\n* fix ~Sadwhy","status":"success","elapsed-time":16786.439442606,"workflow":{"id":8912748396,"title":"Very small UI change (#384)"}}
