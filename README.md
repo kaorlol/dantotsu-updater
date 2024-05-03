@@ -10,4 +10,3 @@ Download [Obtainium](https://github.com/ImranR98/Obtainium) then add this reposi
 
 Make sure to toggle these settings when you add it to Obtainium
 - Verify the 'latest' tag
-- Reconcile string with version detected from OS
