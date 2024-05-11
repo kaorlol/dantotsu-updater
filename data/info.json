@@ -1,1 +1,1 @@
-{"commit-log":"- feat: list searching ~rebelonion","status":"success","elapsed-time":13583.613684705,"workflow":{"id":9040637975,"title":"feat: list searching"}}
+{"commit-log":"- fix: searchHistoryAdapter call before initialized ~rebelonion","status":"success","elapsed-time":7677.557008327,"workflow":{"id":9041331985,"title":"fix: searchHistoryAdapter call before initialized"}}
