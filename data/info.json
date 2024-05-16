@@ -1,1 +1,1 @@
-{"commit-log":"- fix: reply text background color ~aayush262","status":"success","elapsed-time":5046.360735007,"workflow":{"id":9068391237,"title":"fix: reply text background color"}}
+{"commit-log":"- feat: support for multiple audio/subtitle downloads ~rebelonion\n- fix: broken neutral button ~rebelonion\n- fix: string sanitizer ~rebelonion\n- feat: anilist post confirmation ~rebelonion","status":"success","elapsed-time":20879.428690924,"workflow":{"id":9118303793,"title":"feat: support for multiple audio/subtitle downloads"}}
